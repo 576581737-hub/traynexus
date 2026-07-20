@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Ultracode 间隙对比 · 90×6 锁定</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
+    background: #f3f3f6;
+    color: #1d1d1f;
+    padding: 32px 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .sub {
+    text-align: center;
+    color: #6e6e73;
+    font-size: 13px;
+    margin-bottom: 28px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #e3e3e8;
+    border-radius: 14px;
+    padding: 18px 20px 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1d1d1f;
+  }
+  .card-sub {
+    font-size: 12px;
+    color: #6e6e73;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .badge-now {
+    background: rgba(10,122,255,0.12);
+    color: #0A7AFF;
+  }
+  .badge-alt {
+    background: rgba(120,120,128,0.12);
+    color: #6e6e73;
+  }
+  .section { margin-bottom: 14px; }
+  .section:last-child { margin-bottom: 0; }
+  .label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .label-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1d1d1f;
+  }
+  .label-val {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #1d1d1f;
+  }
+  .uc-bar {
+    height: 26px;
+    background: rgba(8, 4, 16, 0.9);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 2px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+  }
+  .uc-bar canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 1px;
+  }
+  .uc-bar.batt { box-shadow: inset 0 2px 10px rgba(0,0,0,0.8), 0 0 15px rgba(10,122,255,0.15); }
+  .specs {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f3;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    font-size: 11px;
+    color: #6e6e73;
+  }
+  .specs b { color: #1d1d1f; font-weight: 600; }
+  .hint {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 12.5px;
+    color: #6e6e73;
+  }
+</style>
+</head>
+<body>
+
+<h1>Ultracode 间隙对比 · 90×6 锁定</h1>
+<p class="sub">保持 540 格不变，仅改格子之间的暗色缝隙宽度。暗色背景透过缝隙显示 = 像素感。</p>
+
+<div class="grid">
+
+  <!-- A: 当前无缝隙 -->
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">A · 无缝隙（当前）</div>
+        <div class="card-sub">gap = 0px · 格子糊成一片</div>
+      </div>
+      <span class="badge badge-now">现在</span>
+    </div>
+    <div class="section">
+      <div class="label-row">
+        <div class="label-name">内存 <span style="font-weight:400;color:#6e6e73;font-size:11px;margin-left:4px;">5.8/16.0 GB</span></div>
+        <div class="label-val">36%</div>
+      </div>
+      <div class="uc-bar"><canvas id="aMem"></canvas></div>
+    </div>
+    <div class="section">
+      <div class="label-row">
+        <div class="label-name">电池 <span style="font-weight:400;color:#6e6e73;font-size:11px;margin-left:4px;">充电中</span></div>
+        <div class="label-val">78%</div>
+      </div>
+      <div class="uc-bar batt"><canvas id="aBatt"></canvas></div>
+    </div>
+    <div class="specs">
+      <span><b>gap</b> 0px</span><span><b>缝隙</b> 0%</span><span><b>视觉</b> 连续渐变条</span>
+    </div>
+  </div>
+
+  <!-- B: 1px 缝隙 -->
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">B · 1px 细缝</div>
+        <div class="card-sub">gap = 1px · 隐约像素感</div>
+      </div>
+      <span class="badge badge-alt">备选</span>
+    </div>
+    <div class="section">
+      <div class="label-row">
+        <div class="label-name">内存 <span style="font-weight:400;color:#6e6e73;font-size:11px;margin-left:4px;">5.8/16.0 GB</span></div>
+        <div class="label-val">36%</div>
+      </div>
+      <div class="uc-bar"><canvas id="bMem"></canvas></div>
+    </div>
+    <div class="section">
+      <div class="label-row">
+        <div class="label-name">电池 <span style="font-weight:400;color:#6e6e73;font-size:11px;margin-left:4px;">充电中</span></div>
+        <div class="label-val">78%</div>
+      </div>
+      <div class="uc-bar batt"><canvas id="bBatt"></canvas></div>
+    </div>
+    <div class="specs">
+      <span><b>gap</b> 1px</span><span><b>缝隙</b> ~7%</span><span><b>视觉</b> 细微颗粒</span>
+    </div>
+  </div>
+
+  <!-- C: 1.5px 缝隙 -->
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">C · 1.5px 清晰</div>
+        <div class="card-sub">gap = 1.5px · 明显像素感</div>
+      </div>
+      <span class="badge badge-alt">备选</span>
+    </div>
+    <div class="section">
+      <div class="label-row">
+        <div class="label-name">内存 <span style="font-weight:400;color:#6e6e73;font-size:11px;margin-left:4px;">5.8/16.0 GB</span></div>
+        <div class="label-val">36%</div>
+      </div>
+      <div class="uc-bar"><canvas id="cMem"></canvas></div>
+    </div>
+    <div class="section">
+      <div class="label-row">
+        <div class="label-name">电池 <span style="font-weight:400;color:#6e6e73;font-size:11px;margin-left:4px;">充电中</span></div>
+        <div class="label-val">78%</div>
+      </div>
+      <div class="uc-bar batt"><canvas id="cBatt"></canvas></div>
+    </div>
+    <div class="specs">
+      <span><b>gap</b> 1.5px</span><span><b>缝隙</b> ~10%</span><span><b>视觉</b> 像素屏</span>
+    </div>
+  </div>
+
+  <!-- D: 2px 缝隙 -->
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <div class="card-title">D · 2px 强像素</div>
+        <div class="card-sub">gap = 2px · 像素艺术感</div>
+      </div>
+      <span class="badge badge-alt">备选</span>
+    </div>
+    <div class="section">
+      <div class="label-row">
+        <div class="label-name">内存 <span style="font-weight:400;color:#6e6e73;font-size:11px;margin-left:4px;">5.8/16.0 GB</span></div>
+        <div class="label-val">36%</div>
+      </div>
+      <div class="uc-bar"><canvas id="dMem"></canvas></div>
+    </div>
+    <div class="section">
+      <div class="label-row">
+        <div class="label-name">电池 <span style="font-weight:400;color:#6e6e73;font-size:11px;margin-left:4px;">充电中</span></div>
+        <div class="label-val">78%</div>
+      </div>
+      <div class="uc-bar batt"><canvas id="dBatt"></canvas></div>
+    </div>
+    <div class="specs">
+      <span><b>gap</b> 2px</span><span><b>缝隙</b> ~14%</span><span><b>视觉</b> 像素艺术</span>
+    </div>
+  </div>
+
+</div>
+
+<p class="hint">挑你喜欢的缝隙宽度，告诉我数字（B=1px / C=1.5px / D=2px），我把它写进 Canvas 引擎——就是改一个 GAP 常量。</p>
+
+<script>
+// === 参数化 Ultracode 引擎（90×6 锁定，仅变 GAP） ===
+function initUltracode(canvasId, palette, percent, gap) {
+  const COLS = 90, ROWS = 6;
+  const cv = document.getElementById(canvasId);
+  const ctx = cv.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const cells = [];
+  const bh = palette.baseHue, mh = palette.maxHue, wrap = bh > mh;
+
+  function ensureSize() {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width === w * dpr && cv.height === h * dpr && cv.dataset.sized) return;
+    cv.width = w * dpr; cv.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cv.dataset.sized = '1';
+  }
+  ensureSize();
+  window.addEventListener('resize', ensureSize);
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      cells.push({
+        col: c, row: r, colRatio: c / COLS,
+        baseLevel: 0.12 + (c / COLS) * 0.25,
+        flickerPhase: Math.random() * Math.PI * 2, flickerSpeed: 4 + Math.random() * 6, flickerAmp: 0.1 + Math.random() * 0.15,
+        burstPhase: Math.random() * Math.PI * 2, burstSpeed: 2 + Math.random() * 5, burstThreshold: Math.random(), burstMaxIntensity: 0.4 + Math.random() * 0.5,
+        statePhase: Math.random() * Math.PI * 2, stateSpeed: (1 - c / COLS) * 3.0 + 1.0, purpleThresh: 0.8 - (c / COLS) * 0.6
+      });
+    }
+  }
+
+  function tick(t) {
+    ensureSize();
+    const w = cv.clientWidth, h = cv.clientHeight;
+    const cellW = w / COLS, cellH = h / ROWS;
+    // 关键：cell 实际绘制尺寸 = 格子槽 - 缝隙，让暗色 bar 背景透出形成分缝
+    const drawW = Math.max(0.5, cellW - gap);
+    const drawH = Math.max(0.5, cellH - gap);
+    const offsetX = (cellW - drawW) / 2;
+    const offsetY = (cellH - drawH) / 2;
+    const time = t / 1000;
+    const scanProgress = percent / 100;
+    const scanPos = -0.2 + scanProgress * 1.2;
+    ctx.clearRect(0, 0, w, h);
+
+    // Pass 1: 底色（每个 cell 留出 gap，让背景透出）
+    for (const p of cells) {
+      const dist = p.colRatio - scanPos;
+      let wave = 0;
+      if (dist > 0 && dist < 0.05) wave = 1 - (dist / 0.05);
+      else if (dist <= 0 && dist > -1.8) wave = Math.pow(1 - Math.abs(dist) / 1.8, 3);
+      let burst = 0;
+      if (wave > p.burstThreshold * 0.8) {
+        const burstCycle = (Math.cos(time * p.burstSpeed + p.burstPhase) + 1) * 0.5;
+        burst = Math.pow(burstCycle, 6) * p.burstMaxIntensity * (0.3 + wave * 0.7);
+      }
+      const baseFlicker = Math.sin(time * p.flickerSpeed + p.flickerPhase) * p.flickerAmp * (0.3 + wave * 0.7);
+      const stateSignal = Math.sin(time * p.stateSpeed + p.statePhase) * 0.5 + 0.5;
+      const isWhite = stateSignal > p.purpleThresh;
+      const whiteness = Math.max(0, Math.min(1, (stateSignal - p.purpleThresh) / 0.15));
+      let rawLevel = p.baseLevel + baseFlicker + burst + (wave * 0.85);
+      const center = (ROWS - 1) / 2;
+      const rowDist = Math.abs(p.row - center);
+      rawLevel *= (1 - rowDist * 0.08);
+      let level;
+      if (isWhite) level = rawLevel;
+      else level = 0.20 + rawLevel * 0.25;
+      if (whiteness < 1) {
+        const purpleLevel = 0.20 + rawLevel * 0.25;
+        level = level * whiteness + purpleLevel * (1 - whiteness);
+      }
+      const l = Math.max(0, Math.min(1, level));
+      let hue;
+      if (wrap) { const range = (360 - bh) + mh; hue = bh + l * range; if (hue > 360) hue -= 360; }
+      else { hue = bh + l * (mh - bh); }
+      const sat = 50 + (l * 50), light = 8 + (l * 92);
+      p._hue = hue; p._light = l;
+      ctx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
+      ctx.fillRect(p.col * cellW + offsetX, p.row * cellH + offsetY, drawW, drawH);
+    }
+
+    // Pass 2: 辉光（仅亮格 + 同样缩进，保持缝隙一致）
+    if (gap < 1.5) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const p of cells) {
+        if (p._light > 0.8) {
+          const glowIntensity = (p._light - 0.8) * 5;
+          ctx.shadowColor = `hsl(${p._hue}, 100%, 75%)`;
+          ctx.shadowBlur = 4 * glowIntensity;
+          ctx.fillStyle = `hsl(${p._hue}, 100%, 70%)`;
+          ctx.fillRect(p.col * cellW + offsetX, p.row * cellH + offsetY, drawW, drawH);
+        }
+      }
+      ctx.restore();
+    } else {
+      // gap 较大时，辉光稍微"溢出"填补分缝（不让缝隙吞掉高光的连续感）
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const p of cells) {
+        if (p._light > 0.8) {
+          const glowIntensity = (p._light - 0.8) * 5;
+          ctx.shadowColor = `hsl(${p._hue}, 100%, 75%)`;
+          ctx.shadowBlur = 4 * glowIntensity + gap;
+          ctx.fillStyle = `hsl(${p._hue}, 100%, 70%)`;
+          // 辉光用原格子大小（无 inset），让高光"穿透"缝隙
+          ctx.fillRect(p.col * cellW, p.row * cellH, cellW, cellH);
+        }
+      }
+      ctx.restore();
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// 启动 4 组间隙对比（90×6 锁定）
+const memPalette = { baseHue: 260, maxHue: 290 };
+const battPalette = { baseHue: 205, maxHue: 230 };
+initUltracode('aMem', memPalette, 36, 0);
+initUltracode('aBatt', battPalette, 78, 0);
+initUltracode('bMem', memPalette, 36, 1);
+initUltracode('bBatt', battPalette, 78, 1);
+initUltracode('cMem', memPalette, 36, 1.5);
+initUltracode('cBatt', battPalette, 78, 1.5);
+initUltracode('dMem', memPalette, 36, 2);
+initUltracode('dBatt', battPalette, 78, 2);
+</script>
+</body>
+</html>
