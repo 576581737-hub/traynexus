@@ -1,0 +1,14 @@
+# 统一换行符策略
+# 默认按内容自动判定文本，checkout 时统一转 LF
+* text=auto eol=lf
+
+# Windows 批处理文件必须是 CRLF，否则 cmd.exe 会解析失败
+# （本项目曾因 LF 换行导致 build.bat 编译命令被截断）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制资源：明确标记为 binary，避免被当成文本处理
+*.png binary
+*.ico binary
+*.dll binary
+*.exe binary

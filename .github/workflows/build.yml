@@ -1,0 +1,24 @@
+name: Build
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build with csc (no Visual Studio / SDK required)
+        # 使用 .NET Framework 4.x 自带的 csc.exe，配合 build.rsp 响应文件
+        run: C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe @build.rsp
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Traynexus
+          path: bin/Traynexus.exe
