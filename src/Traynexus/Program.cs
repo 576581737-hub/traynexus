@@ -12,9 +12,22 @@ namespace Traynexus
         [STAThread]
         static void Main()
         {
-            bool createdNew;
-            _mutex = new Mutex(true, "Global\\Traynexus_SingleInstance_v1", out createdNew);
-            if (!createdNew)
+            // 用 initiallyOwned=false 创建，再 WaitOne(0) 抢锁，
+            // 这样能捕获 AbandonedMutexException（上个进程崩溃导致锁被遗弃），
+            // 让新实例可以正常接管而不是误报"已在运行"。
+            _mutex = new Mutex(false, "Global\\Traynexus_SingleInstance_v1");
+            bool owned;
+            try
+            {
+                owned = _mutex.WaitOne(0);
+            }
+            catch (AbandonedMutexException)
+            {
+                // 上个进程异常退出，mutex 被遗弃；当前线程已获得所有权，继续启动
+                owned = true;
+            }
+
+            if (!owned)
             {
                 MessageBox.Show("Traynexus 已经在运行了。", "Traynexus",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -35,7 +48,8 @@ namespace Traynexus
             }
             finally
             {
-                GC.KeepAlive(_mutex);
+                try { _mutex.ReleaseMutex(); } catch { }
+                try { _mutex.Dispose(); } catch { }
             }
         }
     }

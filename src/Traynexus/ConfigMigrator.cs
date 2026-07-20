@@ -57,6 +57,8 @@ namespace Traynexus
         /// <summary>
         /// 执行迁移：把旧目录所有文件复制到新目录（不覆盖已存在文件）。
         /// 成功返回 FilesCopied 计数；失败返回 Success=false 及异常消息。
+        /// 迁移成功后会尝试删除旧目录，避免下次启动 ConflictDetected() 持续弹气泡。
+        /// 旧目录删除失败不影响迁移结果（仅日志记录）。
         /// </summary>
         public static MigrationResult Migrate()
         {
@@ -75,11 +77,29 @@ namespace Traynexus
                         copied++;
                     }
                 }
+
+                // 迁移成功后删除旧目录，避免下次启动 ConflictDetected() 持续弹气泡
+                // 失败不影响迁移结果，仅记录日志
+                string cleanupNote = "";
+                try
+                {
+                    if (Directory.Exists(OldConfigDir))
+                    {
+                        Directory.Delete(OldConfigDir, recursive: true);
+                        cleanupNote = "，已清理旧目录";
+                    }
+                }
+                catch (Exception delEx)
+                {
+                    Settings.Log("ConfigMigrator 删除旧目录失败: " + delEx.Message);
+                    cleanupNote = "，旧目录删除失败（可手动删除 " + OldConfigDir + "）";
+                }
+
                 return new MigrationResult
                 {
                     Success = true,
                     FilesCopied = copied,
-                    Message = "已从 MemTrayCN 迁移 " + copied + " 个文件"
+                    Message = "已从 MemTrayCN 迁移 " + copied + " 个文件" + cleanupNote
                 };
             }
             catch (Exception ex)

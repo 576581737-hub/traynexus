@@ -154,11 +154,34 @@ namespace Traynexus
         public const uint SWP_NOZORDER = 0x0004;
         public const uint SWP_FRAMECHANGED = 0x0020;
 
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+        // 32 位版本（GetWindowLong/SetWindowLong）在 64 位系统上读写 GWL_STYLE 也能工作，
+        // 但读 GWL_HINSTANCE/GWL_HWNDPARENT/GWL_USERDATA 这类指针值会截断。
+        // 统一改用 Ptr 版本，对 32/64 位都安全。当前仅用于 GWL_STYLE，取低 32 位即可。
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+        private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
 
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
+        private static extern int GetWindowLong32(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+        private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+        private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        public static int GetWindowLong(IntPtr hWnd, int nIndex)
+        {
+            if (IntPtr.Size == 8)
+                return (int)GetWindowLongPtr64(hWnd, nIndex).ToInt64();
+            return GetWindowLong32(hWnd, nIndex);
+        }
+
+        public static int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong)
+        {
+            if (IntPtr.Size == 8)
+                return (int)SetWindowLongPtr64(hWnd, nIndex, new IntPtr(dwNewLong)).ToInt64();
+            return SetWindowLong32(hWnd, nIndex, dwNewLong);
+        }
 
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]

@@ -47,6 +47,14 @@ namespace Traynexus
         private static readonly object _cacheLock = new object();
         private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
+        // ==== 状态缓存（避免 TickRefresh 每秒 IOCTL）====
+        private static ChargeStatus _cachedStatus;
+        private static DateTime _statusTime = DateTime.MinValue;
+        private static readonly TimeSpan StatusTtl = TimeSpan.FromSeconds(10);
+
+        // ==== IOCTL 互斥锁（防止滑块拖动/并发操作同时打开设备句柄）====
+        private static readonly object _ioctlLock = new object();
+
         /// <summary>
         /// 检测当前设备的充电阈值控制能力。结果缓存 5 分钟。
         /// 线程安全。
@@ -122,68 +130,106 @@ namespace Traynexus
             {
                 _cachedCap = null;
                 _cacheTime = DateTime.MinValue;
+                _cachedStatus = null;
+                _statusTime = DateTime.MinValue;
             }
         }
 
         /// <summary>
         /// 设置充电上限百分比。返回是否成功。
         /// Lenovo 因固件限制会把任意百分比映射到 3 档模式。
+        /// 加互斥锁防止滑块拖动等并发触发同时打开设备句柄。
         /// </summary>
         public static bool SetChargeLimit(int percent)
         {
             if (percent < 40 || percent > 100) return false;
             var cap = GetCapability();
             if (!cap.Supported) return false;
-            try
+            lock (_ioctlLock)
             {
-                switch (cap.Oem)
+                try
                 {
-                    case OemVendor.Asus:   return SetAsusLimit(percent);
-                    case OemVendor.Lenovo: return SetLenovoByPercent(percent);
-                    default: return false;
+                    bool ok;
+                    switch (cap.Oem)
+                    {
+                        case OemVendor.Asus:   ok = SetAsusLimit(percent); break;
+                        case OemVendor.Lenovo: ok = SetLenovoByPercent(percent); break;
+                        default: return false;
+                    }
+                    // 成功后清状态缓存，让下次 GetStatus 立即读到新值
+                    if (ok)
+                    {
+                        lock (_cacheLock)
+                        {
+                            _cachedStatus = null;
+                            _statusTime = DateTime.MinValue;
+                        }
+                    }
+                    return ok;
                 }
-            }
-            catch (Exception ex)
-            {
-                Settings.Log("OemChargeController.SetChargeLimit 失败: " + ex.Message);
-                return false;
+                catch (Exception ex)
+                {
+                    Settings.Log("OemChargeController.SetChargeLimit 失败: " + ex.Message);
+                    return false;
+                }
             }
         }
 
         /// <summary>
         /// 查询当前充电模式/阈值，供诊断面板和充电页验证。
+        /// 结果缓存 10 秒，避免 TickRefresh 每秒打开设备句柄。
         /// 返回 null 表示无法读取。
         /// </summary>
         public static ChargeStatus GetStatus()
         {
+            lock (_cacheLock)
+            {
+                if (_cachedStatus != null && DateTime.Now - _statusTime < StatusTtl)
+                    return _cachedStatus;
+            }
+
             var cap = GetCapability();
             if (!cap.Supported) return null;
-            try
+
+            ChargeStatus result = null;
+            lock (_ioctlLock)
             {
-                if (cap.Oem == OemVendor.Asus)
+                try
                 {
-                    int? v = QueryAsusLimit();
-                    if (v.HasValue) return new ChargeStatus { LimitPercent = v.Value, ModeName = v.Value + "%" };
-                }
-                else if (cap.Oem == OemVendor.Lenovo)
-                {
-                    int mode = QueryLenovoMode();
-                    string name;
-                    int limit;
-                    switch (mode)
+                    if (cap.Oem == OemVendor.Asus)
                     {
-                        case 0: name = "保养"; limit = 60; break;
-                        case 1: name = "快充"; limit = 100; break;
-                        default: name = "正常"; limit = 100; break;
+                        int? v = QueryAsusLimit();
+                        if (v.HasValue) result = new ChargeStatus { LimitPercent = v.Value, ModeName = v.Value + "%" };
                     }
-                    return new ChargeStatus { LimitPercent = limit, ModeName = name };
+                    else if (cap.Oem == OemVendor.Lenovo)
+                    {
+                        int mode = QueryLenovoMode();
+                        string name;
+                        int limit;
+                        switch (mode)
+                        {
+                            case 0: name = "保养"; limit = 60; break;
+                            case 1: name = "快充"; limit = 100; break;
+                            default: name = "正常"; limit = 100; break;
+                        }
+                        result = new ChargeStatus { LimitPercent = limit, ModeName = name };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Settings.Log("OemChargeController.GetStatus 失败: " + ex.Message);
                 }
             }
-            catch (Exception ex)
+
+            if (result != null)
             {
-                Settings.Log("OemChargeController.GetStatus 失败: " + ex.Message);
+                lock (_cacheLock)
+                {
+                    _cachedStatus = result;
+                    _statusTime = DateTime.Now;
+                }
             }
-            return null;
+            return result;
         }
 
         // ============================================================

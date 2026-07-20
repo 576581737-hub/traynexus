@@ -248,20 +248,32 @@ namespace Traynexus
             }
         }
 
+        private volatile bool _batterySampling;
         private void BatteryTick()
         {
-            try
+            // 后台线程采集（WMI 查询可能耗时 100-500ms），UI 线程只更新结果
+            if (_batterySampling) return;   // 上次还没采完，跳过
+            _batterySampling = true;
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
-                _battery = BatteryInfo.Take();
-                // 电池变化时更新图标
-                if (_battery.Percent != _lastBatteryPercent || _battery.IsCharging != _lastBatteryCharging)
+                BatterySnapshot snap = null;
+                try { snap = BatteryInfo.Take(); }
+                catch (Exception ex) { Settings.Log("BatteryTick 失败: " + ex.Message); }
+                finally { _batterySampling = false; }
+                if (snap == null) return;
+
+                this.PostToUi(() =>
                 {
-                    _lastBatteryPercent = _battery.Percent;
-                    _lastBatteryCharging = _battery.IsCharging;
-                    _lastPercent = -1; // 强制下次 TickRefresh 重建图标
-                }
-            }
-            catch (Exception ex) { Settings.Log("BatteryTick 失败: " + ex.Message); }
+                    _battery = snap;
+                    // 电池变化时更新图标
+                    if (_battery.Percent != _lastBatteryPercent || _battery.IsCharging != _lastBatteryCharging)
+                    {
+                        _lastBatteryPercent = _battery.Percent;
+                        _lastBatteryCharging = _battery.IsCharging;
+                        _lastPercent = -1; // 强制下次 TickRefresh 重建图标
+                    }
+                });
+            });
         }
 
         // ============================================================
@@ -289,16 +301,6 @@ namespace Traynexus
                 }
             }
             catch { }
-        }
-
-        private void ShowAbout()
-        {
-            MessageBox.Show(
-                "Traynexus v1.0717.3\r\n" +
-                "系统资源一体化管家：内存释放 · 电池保养 · 亮度管理\r\n\r\n" +
-                "© 2026 Aiyow · 由 MemTrayCN 演进而来\r\n" +
-                "联系方式：zzaiyow@agent.qq.com",
-                "关于 Traynexus", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void ExitApp()

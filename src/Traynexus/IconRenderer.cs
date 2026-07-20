@@ -150,7 +150,10 @@ namespace Traynexus
                         {
                             g.DrawString(text, font, shadowBrush, shadowRect, sf);
                         }
-                        g.DrawString(text, font, new SolidBrush(textColor), fullRect, sf);
+                        using (var textBrush = new SolidBrush(textColor))
+                        {
+                            g.DrawString(text, font, textBrush, fullRect, sf);
+                        }
                     }
                 }
 

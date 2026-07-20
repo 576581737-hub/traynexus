@@ -63,6 +63,7 @@ namespace Traynexus
 
         /// <summary>
         /// 关闭开机自启：删除任务计划。
+        /// 检查 ExitCode，删除失败（任务不存在/权限不足）返回 false。
         /// </summary>
         public static bool Disable()
         {
@@ -72,10 +73,15 @@ namespace Traynexus
                     "/Delete /TN \"" + TaskName + "\" /F")
                 {
                     UseShellExecute = false,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
                 };
-                using (var p = Process.Start(psi)) { p.WaitForExit(5000); }
-                return true;
+                using (var p = Process.Start(psi))
+                {
+                    p.WaitForExit(5000);
+                    return p.ExitCode == 0;
+                }
             }
             catch { return false; }
         }

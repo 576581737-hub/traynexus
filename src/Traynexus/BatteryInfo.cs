@@ -62,6 +62,12 @@ namespace Traynexus
         private static readonly object _cacheLock = new object();
         private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(30);
 
+        // FillDeepData 整体结果缓存（WMI + powercfg 全部查询，30s 内复用）
+        // 深度数据（容量/循环次数/制造商/序列号等）变化缓慢，无需每次重查
+        private static BatteryDeepData _cachedDeepAll;
+        private static DateTime _deepAllTime = DateTime.MinValue;
+        private static readonly TimeSpan DeepAllTtl = TimeSpan.FromSeconds(30);
+
         /// <summary>
         /// 采集当前电池快照。线程安全（每次新建 ManagementObjectSearcher）。
         /// </summary>
@@ -84,10 +90,13 @@ namespace Traynexus
                         // BatteryStatus: 1=放电, 2=交流电, 3=已充电, 4=低, 5=严重低, 其他
                         // 注意：status=2 只表示「接着电源」，不代表真正在充电
                         // 保养模式下 status=2 但 ChargeRate=0（充电已暂停）
+                        // status=3 是"已充满"，不算充电中
                         try
                         {
                             int status = Convert.ToInt32(mo["BatteryStatus"]);
-                            snap.IsCharging = (status == 2 || status == 3 || status == 6 || status == 7 || status == 8 || status == 9);
+                            // 只把 2 (AC power) 当作潜在充电中；3 (Charged) 已满，不算
+                            // 后面 root\wmi ChargeRate 查询成功时会用真实充电速率覆盖
+                            snap.IsCharging = (status == 2 || status == 6 || status == 7 || status == 8 || status == 9);
                         }
                         catch { snap.IsCharging = false; }
                         break; // 只取第一个电池
@@ -124,11 +133,23 @@ namespace Traynexus
             return snap;
         }
 
-        /// <summary>填充深度数据：先试 WMI，取不到兜底 powercfg XML 解析</summary>
+        /// <summary>填充深度数据：先试 WMI，取不到兜底 powercfg XML 解析。结果缓存 30s。</summary>
         private static void FillDeepData(BatterySnapshot snap)
         {
+            // 命中缓存：直接复用整份深度数据（容量/循环/制造商/序列号等变化缓慢）
+            lock (_cacheLock)
+            {
+                if (_cachedDeepAll != null && DateTime.Now - _deepAllTime < DeepAllTtl)
+                {
+                    CopyDeepToSnapshot(_cachedDeepAll, snap);
+                    return;
+                }
+            }
+
+            // 未命中：完整执行 WMI + powercfg 查询，结果存到临时 deep 对象
+            var deep = new BatteryDeepData();
+
             // WMI 优先
-            bool wmiGot = false;
             try
             {
                 using (var searcher = new ManagementObjectSearcher(
@@ -136,9 +157,8 @@ namespace Traynexus
                 {
                     foreach (var mo in searcher.Get())
                     {
-                        try { snap.DesignCapacityWh = Convert.ToInt32(mo["DesignedCapacity"]); } catch { }
-                        try { snap.FullChargeCapacityWh = Convert.ToInt32(mo["FullChargedCapacity"]); } catch { }
-                        wmiGot = snap.DesignCapacityWh > 0 || snap.FullChargeCapacityWh > 0;
+                        try { deep.DesignCapacityWh = Convert.ToInt32(mo["DesignedCapacity"]); } catch { }
+                        try { deep.FullChargeCapacityWh = Convert.ToInt32(mo["FullChargedCapacity"]); } catch { }
                         break;
                     }
                 }
@@ -152,7 +172,7 @@ namespace Traynexus
                 {
                     foreach (var mo in searcher.Get())
                     {
-                        try { snap.CycleCount = Convert.ToInt32(mo["CycleCount"]); } catch { }
+                        try { deep.CycleCount = Convert.ToInt32(mo["CycleCount"]); } catch { }
                         break;
                     }
                 }
@@ -160,25 +180,23 @@ namespace Traynexus
             catch { /* 静默 */ }
 
             // WMI 取不到设计/满充容量 -> 兜底 powercfg
-            if (snap.DesignCapacityWh <= 0 || snap.FullChargeCapacityWh <= 0 || snap.CycleCount <= 0)
+            if (deep.DesignCapacityWh <= 0 || deep.FullChargeCapacityWh <= 0 || deep.CycleCount <= 0)
             {
-                var deep = GetDeepDataFromPowercfg();
-                if (deep != null)
+                var fromPowercfg = GetDeepDataFromPowercfg();
+                if (fromPowercfg != null)
                 {
-                    if (snap.DesignCapacityWh <= 0) snap.DesignCapacityWh = deep.DesignCapacityWh;
-                    if (snap.FullChargeCapacityWh <= 0) snap.FullChargeCapacityWh = deep.FullChargeCapacityWh;
-                    if (snap.CycleCount <= 0) snap.CycleCount = deep.CycleCount;
-                    // powercfg 报告里的电池详细信息
-                    if (string.IsNullOrEmpty(snap.BatteryName)) snap.BatteryName = deep.BatteryName;
-                    if (string.IsNullOrEmpty(snap.Manufacturer)) snap.Manufacturer = deep.Manufacturer;
-                    if (string.IsNullOrEmpty(snap.SerialNumber)) snap.SerialNumber = deep.SerialNumber;
-                    if (string.IsNullOrEmpty(snap.Chemistry)) snap.Chemistry = deep.Chemistry;
-                    // 系统信息
-                    snap.ComputerName = deep.ComputerName;
-                    snap.SystemProduct = deep.SystemProduct;
-                    snap.Bios = deep.Bios;
-                    snap.OsBuild = deep.OsBuild;
-                    snap.ReportTime = deep.ReportTime;
+                    if (deep.DesignCapacityWh <= 0) deep.DesignCapacityWh = fromPowercfg.DesignCapacityWh;
+                    if (deep.FullChargeCapacityWh <= 0) deep.FullChargeCapacityWh = fromPowercfg.FullChargeCapacityWh;
+                    if (deep.CycleCount <= 0) deep.CycleCount = fromPowercfg.CycleCount;
+                    if (string.IsNullOrEmpty(deep.BatteryName)) deep.BatteryName = fromPowercfg.BatteryName;
+                    if (string.IsNullOrEmpty(deep.Manufacturer)) deep.Manufacturer = fromPowercfg.Manufacturer;
+                    if (string.IsNullOrEmpty(deep.SerialNumber)) deep.SerialNumber = fromPowercfg.SerialNumber;
+                    if (string.IsNullOrEmpty(deep.Chemistry)) deep.Chemistry = fromPowercfg.Chemistry;
+                    deep.ComputerName = fromPowercfg.ComputerName;
+                    deep.SystemProduct = fromPowercfg.SystemProduct;
+                    deep.Bios = fromPowercfg.Bios;
+                    deep.OsBuild = fromPowercfg.OsBuild;
+                    deep.ReportTime = fromPowercfg.ReportTime;
                 }
             }
 
@@ -190,15 +208,40 @@ namespace Traynexus
                 {
                     foreach (var mo in searcher.Get())
                     {
-                        try { if (string.IsNullOrEmpty(snap.BatteryName)) snap.BatteryName = Convert.ToString(mo["DeviceID"]); } catch { }
-                        try { if (string.IsNullOrEmpty(snap.Manufacturer)) snap.Manufacturer = Convert.ToString(mo["ManufactureName"]); } catch { }
-                        try { if (string.IsNullOrEmpty(snap.SerialNumber)) snap.SerialNumber = Convert.ToString(mo["SerialNumber"]); } catch { }
-                        try { if (string.IsNullOrEmpty(snap.Chemistry)) snap.Chemistry = Convert.ToString(mo["Chemistry"]); } catch { }
+                        try { if (string.IsNullOrEmpty(deep.BatteryName)) deep.BatteryName = Convert.ToString(mo["DeviceID"]); } catch { }
+                        try { if (string.IsNullOrEmpty(deep.Manufacturer)) deep.Manufacturer = Convert.ToString(mo["ManufactureName"]); } catch { }
+                        try { if (string.IsNullOrEmpty(deep.SerialNumber)) deep.SerialNumber = Convert.ToString(mo["SerialNumber"]); } catch { }
+                        try { if (string.IsNullOrEmpty(deep.Chemistry)) deep.Chemistry = Convert.ToString(mo["Chemistry"]); } catch { }
                         break;
                     }
                 }
             }
             catch { /* 静默 */ }
+
+            // 缓存 + 应用
+            lock (_cacheLock)
+            {
+                _cachedDeepAll = deep;
+                _deepAllTime = DateTime.Now;
+            }
+            CopyDeepToSnapshot(deep, snap);
+        }
+
+        /// <summary>把 BatteryDeepData 的深度字段复制到 BatterySnapshot</summary>
+        private static void CopyDeepToSnapshot(BatteryDeepData deep, BatterySnapshot snap)
+        {
+            snap.DesignCapacityWh = deep.DesignCapacityWh;
+            snap.FullChargeCapacityWh = deep.FullChargeCapacityWh;
+            snap.CycleCount = deep.CycleCount;
+            snap.BatteryName = deep.BatteryName ?? "";
+            snap.Manufacturer = deep.Manufacturer ?? "";
+            snap.SerialNumber = deep.SerialNumber ?? "";
+            snap.Chemistry = deep.Chemistry ?? "";
+            snap.ComputerName = deep.ComputerName ?? "";
+            snap.SystemProduct = deep.SystemProduct ?? "";
+            snap.Bios = deep.Bios ?? "";
+            snap.OsBuild = deep.OsBuild ?? "";
+            snap.ReportTime = deep.ReportTime ?? "";
         }
 
         /// <summary>从 powercfg /batteryreport（HTML 格式）正则提取深度数据（带 30s 缓存）</summary>
@@ -220,11 +263,19 @@ namespace Traynexus
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,
+                    RedirectStandardOutput = true,
                     RedirectStandardError = true
                 };
                 using (var p = Process.Start(psi))
                 {
-                    p.WaitForExit(5000);
+                    // 异步消费 stdout/stderr，防止缓冲区满导致子进程阻塞
+                    p.BeginOutputReadLine();
+                    p.BeginErrorReadLine();
+                    if (!p.WaitForExit(5000))
+                    {
+                        try { p.Kill(); } catch { }
+                        return null;
+                    }
                 }
 
                 if (!File.Exists(htmlPath)) return null;

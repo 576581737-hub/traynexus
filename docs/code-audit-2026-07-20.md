@@ -446,11 +446,11 @@ protected override void OnPaintBackground(PaintEventArgs pevent) { }
 
 ---
 
-### P3-3. 国际化字符串硬编码中文
+### ~~P3-3. 国际化字符串硬编码中文~~（已决策：仅中文）
 
 **位置**：全项目
-**问题**：所有 UI 文本、日志、错误消息都是中文，未来如需多语言要重写。
-**建议**：至少把用户可见字符串提取到 `Strings.resx`。
+**决策记录**：作者 2026-07-20 确认仅做中文版。曾考虑中英双语，但实现需引入 resx 资源并重新编译整个项目，成本大于收益，放弃。
+**结论**：非问题。字符串继续硬编码中文即可，无需提取 resx。
 
 ---
 
@@ -465,21 +465,37 @@ protected override void OnPaintBackground(PaintEventArgs pevent) { }
 
 ---
 
-## 修复优先级建议
+## 修复优先级建议（实际修复进度）
 
-### 立刻修复（阻塞发布）
-1. **P0-1**：补上 `BrightnessController.cs` 到 build.bat / build_debug.bat
+### ✅ v1.0720.2 已修复
+1. ~~P0-1~~：build.bat / build_debug.bat 已补 `BrightnessController.cs`
+2. ~~P0-2~~：build_debug.bat 已补 4 个 `/resource` 参数
+3. ~~P1~~：`ConfigMigrator.Migrate` 迁移成功后删除旧目录
+4. ~~P1~~：`SelectChargeMode` 失败回滚 `_settings` 到旧值
+5. ~~P1~~：Lenovo UI 引导改回"5MB EM 驱动"（与代码注释/README 统一）
+6. ~~P2~~：`AutoStartManager.Disable` 检查 `ExitCode`
 
-### 下个版本修复
-2. **P0-2**：重构 `Settings.PersistWhitelist` / `RemovePersisted` / `ReloadWhitelist`，锁外做 I/O
-3. **P1-2**：`BatteryTick` 改后台线程
-4. **P1-6**：`OemChargeController.GetStatus` 加缓存
-5. **P1-3**：`SetChargeLimit` 加互斥锁 + 滑块 debounce
+### ✅ v1.0720.3 已修复
+7. ~~P1~~：`OemChargeController.GetStatus` 加 10s 缓存
+8. ~~P1~~：`SetChargeLimit` 加 `_ioctlLock` 互斥锁 + 滑块 500ms debounce
+9. ~~P1~~：`BatteryTick` 改后台线程采集
+10. ~~P1~~：`BatteryInfo.FillDeepData` 加 30s 缓存
+11. ~~P1~~：`IconRenderer.RenderIcon` `new SolidBrush` 改 using
+12. ~~P2~~：Settings 锁外 I/O（PersistWhitelist / RemovePersisted / ReloadWhitelist）
+13. ~~P2~~：`Settings.Save()` 返回 bool
+14. ~~P2~~：`BatteryInfo` powercfg 子进程防阻塞（RedirectStandardOutput + 超时 Kill）
+15. ~~P2~~：`BatteryStatus=3` 兜底改为非充电
+16. ~~P2~~：Program.cs Mutex abandoned 处理
+17. ~~P2~~：删除死代码 `ShowAbout()`
+18. ~~P3~~：`GetWindowLongPtr`/`SetWindowLongPtr` 64 位稳妥化
+19. ~~P3~~：error.log 1MB 截断
+20. ~~P3~~：app.manifest supportedOS 收敛到 Win 10+
 
-### 长期改进
-6. **P1-1**：Font 静态共享
-7. **P3-1**：MainForm.cs 拆文件
-8. **P3-3**：字符串资源化
+### 🔵 未修复（设计中 / 留给下个迭代）
+21. **P1**（外部报告 #7）：实现 ASUS `QueryAsusLimit`（DSTS 返回值解析），或明确标注"ASUS 不支持回读"。需真实 ASUS 机型验证
+22. **P2**：MainForm Font 静态共享（提取 `Fonts` 静态类），当前页面缓存机制下泄漏场景有限
+23. **P3-1**：MainForm.cs 拆文件（3705 行巨石 → Controls/ + Pages/）
+24. ~~P3-3~~：已决策仅中文，无需处理
 
 ---
 

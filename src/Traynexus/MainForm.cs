@@ -728,26 +728,40 @@ namespace Traynexus
                 _bcVal.Location = new Point(sliderRow.Width - 74, 12);
             };
 
+            // 滑块 debounce：拖动时频繁触发 ValueChanged，等用户停手 500ms 才真正发 IOCTL
+            System.Windows.Forms.Timer bcDebounce = null;
             _bcTrack.ValueChanged += (s, e) =>
             {
                 _bcVal.Text = _bcTrack.Value + "%";
                 _settings.ChargeLimit = _bcTrack.Value;
                 _settings.ChargeMode = _bcTrack.Value >= 100 ? 0 : (_bcTrack.Value >= 80 ? 1 : 2);
                 _settings.Save();
-                // 异步设置充电阈值（IOCTL + 回读校验耗时 1-2s，不阻塞 UI）
-                int sliderVal = _bcTrack.Value;
-                ThreadPool.QueueUserWorkItem(_ =>
+
+                // debounce：重启计时器，500ms 内不再变化才执行
+                if (bcDebounce == null)
                 {
-                    bool ok = false;
-                    if (_chargeCap != null && _chargeCap.Supported)
-                        ok = OemChargeController.SetChargeLimit(sliderVal);
-                    this.BeginInvoke(new Action(() =>
+                    bcDebounce = new System.Windows.Forms.Timer { Interval = 500 };
+                    bcDebounce.Tick += (s2, e2) =>
                     {
-                        _chargeOpOk = ok;
-                        UpdateModeSelection();
-                        UpdateChargeHint();
-                    }));
-                });
+                        bcDebounce.Stop();
+                        int sliderVal = _bcTrack.Value;
+                        // 异步设置充电阈值（IOCTL + 回读校验耗时 1-2s，不阻塞 UI）
+                        ThreadPool.QueueUserWorkItem(_ =>
+                        {
+                            bool ok = false;
+                            if (_chargeCap != null && _chargeCap.Supported)
+                                ok = OemChargeController.SetChargeLimit(sliderVal);
+                            this.BeginInvoke(new Action(() =>
+                            {
+                                _chargeOpOk = ok;
+                                UpdateModeSelection();
+                                UpdateChargeHint();
+                            }));
+                        });
+                    };
+                }
+                bcDebounce.Stop();
+                bcDebounce.Start();
             };
             flow.Controls.Add(sliderRow);
 
@@ -1129,14 +1143,24 @@ namespace Traynexus
         {
             int[] caps = { 100, 80, 60 };
             string[] modeNames = { "满电", "均衡", "保养" };
+
+            // 保存旧值，供 IOCTL 失败时回滚
+            int oldMode = _settings.ChargeMode;
+            int oldLimit = _settings.ChargeLimit;
+
             _settings.ChargeMode = mode;
             _settings.ChargeLimit = caps[mode];
             _settings.Save();
 
             if (_chargeCap == null || !_chargeCap.Supported)
             {
+                // 不支持的机型：不持久化新设置，直接回滚
+                _settings.ChargeMode = oldMode;
+                _settings.ChargeLimit = oldLimit;
+                _settings.Save();
+
                 _chargeOpOk = false;
-                if (_bcTrack != null) _bcTrack.Value = caps[mode];
+                if (_bcTrack != null) _bcTrack.Value = oldLimit;
                 UpdateModeSelection();
                 UpdateChargeHint();
                 MessageBox.Show(this,
@@ -1155,11 +1179,12 @@ namespace Traynexus
                 this.BeginInvoke(new Action(() =>
                 {
                     _chargeOpOk = ok;
-                    if (_bcTrack != null) _bcTrack.Value = targetLimit;
-                    UpdateModeSelection();
-                    UpdateChargeHint();
                     if (ok)
                     {
+                        // 成功：保持已持久化的新设置，仅同步 UI
+                        if (_bcTrack != null) _bcTrack.Value = targetLimit;
+                        UpdateModeSelection();
+                        UpdateChargeHint();
                         MessageBox.Show(this,
                             modeNames[targetMode] + "模式已生效。\r\n\r\n" +
                             (targetMode == 2 ? "充电上限已设为 60%，电池将暂停充电。" :
@@ -1169,12 +1194,21 @@ namespace Traynexus
                     }
                     else
                     {
+                        // 失败：回滚 _settings 到旧值，避免重启后状态不一致
+                        _settings.ChargeMode = oldMode;
+                        _settings.ChargeLimit = oldLimit;
+                        _settings.Save();
+
+                        if (_bcTrack != null) _bcTrack.Value = oldLimit;
+                        UpdateModeSelection();
+                        UpdateChargeHint();
                         MessageBox.Show(this,
                             modeNames[targetMode] + "模式设置未生效。\r\n\r\n" +
                             "驱动接受了命令但未实际切换，可能原因：\r\n" +
                             "1. 厂商电源管理软件未安装或未运行\r\n" +
                             "2. BIOS 中充电阈值控制被禁用\r\n" +
                             "3. 电池温度过高/过低，驱动拒绝切换\r\n\r\n" +
+                            "设置已回滚到之前的模式。\r\n" +
                             "请到「诊断」页查看驱动状态和安装引导。",
                             "充电模式", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
@@ -2000,15 +2034,15 @@ namespace Traynexus
             switch (oem)
             {
                 case OemVendor.Lenovo:
-                    body = "Lenovo 充电阈值控制必须安装 Lenovo Vantage：\r\n\r\n" +
-                           "原因：EnergyDrv 设备虽存在，但充电控制\r\n" +
-                           "需要 Vantage 的 IdeaNotebookAddin 服务\r\n" +
-                           "在后台真正执行，单靠 IOCTL 不生效。\r\n\r\n" +
+                    body = "Lenovo 充电阈值控制只需安装 Energy Management 驱动（5MB）：\r\n\r\n" +
+                           "说明：EnergyDrv 设备由 AcpiVpc.sys 驱动创建，\r\n" +
+                           "通过 IOCTL 0x831020F8 直接控制充电模式，\r\n" +
+                           "无需安装 557MB 的 Lenovo Vantage。\r\n\r\n" +
                            "安装步骤：\r\n" +
-                           "① Microsoft Store 搜索「Lenovo Vantage」\r\n" +
-                           "② 安装后打开，进入「设备」->「电源」\r\n" +
-                           "③ 启用「 Conservation Mode 」\r\n\r\n" +
-                           "安装 Vantage 后重启 TrayNexus，\r\n" +
+                           "① 打开 Lenovo 驱动下载页（点「确定」跳转）\r\n" +
+                           "② 搜索您的机型，下载「Energy Management 驱动」\r\n" +
+                           "   （英文：Energy Management Driver / AcpiVpc）\r\n" +
+                           "③ 安装后重启 TrayNexus\r\n\r\n" +
                            "诊断页应显示「就绪」，充电控制生效。\r\n\r\n" +
                            "点击「确定」打开 Lenovo 驱动下载页。";
                     break;

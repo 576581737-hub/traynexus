@@ -4,6 +4,65 @@
 
 ---
 
+## v1.0720.3 - 2026-07-20（代码审计修复第二批：性能优化 + 资源泄漏 + 健壮性）
+
+### P1 性能优化
+- **OemChargeController.GetStatus**：新增 10s 缓存，避免 TickRefresh 每秒打开/关闭设备句柄
+- **OemChargeController.SetChargeLimit**：新增 `_ioctlLock` 互斥锁，防止滑块拖动/并发操作同时 IOCTL
+- **SetChargeLimit 成功后清空 GetStatus 缓存**，让下次读取立即拿到新值
+- **MainForm 充电页滑块**：新增 500ms debounce，拖动停下后才真正发 IOCTL（之前每帧都发）
+- **TrayContext.BatteryTick**：改为后台线程采集 WMI（可能耗时 100-500ms），UI 线程只更新结果，避免卡 UI
+- **BatteryInfo.FillDeepData**：新增 30s 缓存（容量/循环/制造商/序列号变化缓慢），之前 BatteryTick 5s 一次每次都查 4 个 WMI 类
+
+### P1 资源泄漏
+- **IconRenderer.RenderIcon:153**：`new SolidBrush(textColor)` 直接传参无人 Dispose → 改 `using` 包裹
+
+### P2 健壮性
+- **Settings 锁外 I/O**：`PersistWhitelist` / `RemovePersisted` / `ReloadWhitelist` 文件 I/O 挪出 `WhitelistLock`，避免阻塞后台释放线程；保留「失败回滚只撤回本次新增项」语义
+- **Settings.Save()**：返回值从 `void` 改为 `bool`，与 `WriteWhitelistFile` 设计一致；写盘失败时记日志
+- **BatteryInfo.GetDeepDataFromPowercfg**：powercfg 子进程同时 `RedirectStandardOutput` + `BeginOutputReadLine` 异步消费，超时 5s `Kill()`，防止缓冲区满阻塞
+- **BatteryInfo Win32_Battery status=3**：兜底逻辑改为仅 status=2/6/7/8/9 视为充电中（status=3 是「已充满」不算），避免 root\wmi 不可用时已充满电池被误显为充电中
+- **Program.cs Mutex**：改用 `initiallyOwned=false` + `WaitOne(0)` 抢锁，捕获 `AbandonedMutexException`，上个进程崩溃后新实例可正常接管（之前会误报"已在运行"）
+- **删除死代码 `ShowAbout()`**：CHANGELOG v1.0717.3 标记保留备用，但实际从未被调用，清理减少维护负担
+- **AutoStartManager.Disable**：检查 `ExitCode == 0` 才返回 true，schtasks 失败不再误报成功
+
+### P3 兼容性 / 维护性
+- **NativeMethods.GetWindowLong/SetWindowLong**：声明改为 Ptr 版本（`GetWindowLongPtrW` / `SetWindowLongPtrW`），通过 IntPtr.Size 自动选择 32/64 位实现，64 位系统上更稳妥
+- **Settings.Log**：error.log 超过 1MB 自动截断为只保留最近 512KB，避免无限增长
+- **app.manifest**：移除 Win 7/8/8.1 `supportedOS` 声明（项目用了 Win 10+ WMI 类），避免老系统用户误装
+
+### 产物
+- `bin/Traynexus.exe`（约 297 KB，0 error 0 warning 待用户本地验证）
+
+---
+
+## v1.0720.2 - 2026-07-20（代码审计修复：构建脚本 + 配置迁移 + 充电模式回滚 + 安装引导统一）
+
+### P0 构建脚本修复
+- **build.bat**：补上漏编的 `src\Traynexus\BrightnessController.cs`（之前直接编译会报 CS0103）
+- **build_debug.bat**：补上 `BrightnessController.cs` + 4 个 `/resource:` 参数（logo_256/logo_128/github_icon/github_icon_white）
+  - 之前调试版运行起来窗口图标、品牌图、GitHub 图标全部加载失败
+
+### P1 功能修复
+- **ConfigMigrator.Migrate**：迁移成功后自动删除旧目录 `%APPDATA%\MemTrayCN`
+  - 之前只复制不删除，导致 `ConflictDetected()` 每次启动都返回 true，每次启动都弹冲突气泡
+  - 旧目录删除失败不影响迁移结果，仅日志记录
+- **SelectChargeMode 失败回滚**：IOCTL 设置失败时，`_settings.ChargeMode`/`ChargeLimit` 回滚到旧值并重新 `Save()`
+  - 之前先持久化后执行，IOCTL 失败时重启后 UI 显示的模式与实际硬件状态不一致
+  - 不支持的机型进入 SelectChargeMode 时也不再持久化新设置
+- **Lenovo 安装引导文案统一**：UI 引导从"必须装 557MB Vantage"改回"只需 5MB Energy Management 驱动"
+  - 与 `OemChargeController.cs` 注释 + `README.md` 描述一致
+  - 之前三方话术矛盾：代码注释/README 说不要 Vantage，UI 引导说必须装 Vantage
+
+### P2 健壮性修复
+- **AutoStartManager.Disable**：检查 `ExitCode`，schtasks 删除失败时返回 false
+  - 之前不检查退出码，失败也返回 true，用户以为关掉了实际没关
+
+### 产物
+- `bin/Traynexus.exe`（同 v1.0720.1 体积，约 297 KB，0 error 0 warning）
+
+---
+
 ## v1.0720.1 - 2026-07-20（Lenovo 充电控制 IOCTL 验证通过 + 诊断页修复 + 全功能验证）
 
 ### Lenovo 充电控制最终方案

@@ -18,14 +18,38 @@ namespace Traynexus
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Traynexus", "error.log");
 
+        // error.log 超过 1MB 时截断为只保留最近 512KB，避免无限增长
+        private const long MaxLogBytes = 1L * 1024 * 1024;        // 1 MB
+        private const long KeepLogBytes = 512L * 1024;             // 保留最近 512 KB
+
         /// <summary>
         /// 追加一行日志到 %APPDATA%\Traynexus\error.log。失败时静默。
         /// 仅用于关键 I/O 和异常路径，不用于常规流程。
+        /// 文件超过 1MB 时自动截断为只保留最近 512KB。
         /// </summary>
         public static void Log(string msg)
         {
             try
             {
+                // 大小检查与截断（截断失败不影响追加）
+                try
+                {
+                    var fi = new FileInfo(LogPath);
+                    if (fi.Exists && fi.Length > MaxLogBytes)
+                    {
+                        string full = File.ReadAllText(LogPath, Encoding.UTF8);
+                        int keepChars = (int)Math.Min(full.Length, KeepLogBytes);
+                        string tail = full.Substring(full.Length - keepChars);
+                        // 从下一行开头截，避免半行
+                        int nl = tail.IndexOf('\n');
+                        if (nl >= 0 && nl < tail.Length - 1) tail = tail.Substring(nl + 1);
+                        File.WriteAllText(LogPath,
+                            "---- 日志已截断（仅保留最近 " + KeepLogBytes / 1024 + " KB）----\r\n" + tail,
+                            new UTF8Encoding(false));
+                    }
+                }
+                catch { /* 截断失败不影响追加 */ }
+
                 File.AppendAllText(LogPath,
                     DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + msg + "\r\n",
                     new UTF8Encoding(false));
@@ -83,20 +107,30 @@ namespace Traynexus
         /// 把 SessionWhitelist 合并到 UserWhitelist 并写文件。
         /// H1/H9 修复：先写文件成功再清会话，写失败回滚，返回是否真的成功。
         /// 二次审计 P1-1 修复：只回滚本次真正新增的项，避免误删原有持久化项。
+        /// 三次审计 P2 修复：文件 I/O 挪出锁外，避免阻塞后台释放线程。
         /// </summary>
         public bool PersistWhitelist()
         {
+            List<string> added;
+            string contentToWrite;
+
+            // 第一步：在锁内改内存状态 + 构造要写入的内容
             lock (WhitelistLock)
             {
-                // 先把会话项加入 UserWhitelist（内存）。
-                // Add 返回 true 表示确属新增；false 表示原本就在持久化名单里。
-                var added = new List<string>();
+                added = new List<string>();
                 foreach (var n in SessionWhitelist)
                 {
                     if (UserWhitelist.Add(n)) added.Add(n);
                 }
-                // 尝试写文件
-                bool ok = WriteWhitelistFile();
+                contentToWrite = BuildWhitelistContent();
+            }
+
+            // 第二步：锁外做文件 I/O（可能耗时几十到几百毫秒）
+            bool ok = TryWriteWhitelistFile(contentToWrite);
+
+            // 第三步：锁内根据 I/O 结果决定提交还是回滚
+            lock (WhitelistLock)
+            {
                 if (ok)
                 {
                     SessionWhitelist.Clear();
@@ -114,13 +148,18 @@ namespace Traynexus
 
         /// <summary>
         /// 从持久化白名单里移除若干条目并立即写文件。返回是否成功。
+        /// 文件 I/O 挪出锁外。
         /// </summary>
         public bool RemovePersisted(IEnumerable<string> namesToRemove)
         {
             if (namesToRemove == null) return true;
+
+            List<string> removed;
+            string contentToWrite;
+
             lock (WhitelistLock)
             {
-                var removed = new List<string>();
+                removed = new List<string>();
                 foreach (var n in namesToRemove)
                 {
                     if (UserWhitelist.Remove(n)) removed.Add(n);
@@ -135,23 +174,27 @@ namespace Traynexus
                         if (UserWhitelist.Remove(n + ".exe")) removed.Add(n + ".exe");
                     }
                 }
-                bool ok = WriteWhitelistFile();
-                if (!ok)
+                contentToWrite = BuildWhitelistContent();
+            }
+
+            bool ok = TryWriteWhitelistFile(contentToWrite);
+
+            if (!ok)
+            {
+                lock (WhitelistLock)
                 {
                     // 回滚
                     foreach (var r in removed) UserWhitelist.Add(r);
-                    return false;
                 }
-                return true;
+                return false;
             }
+            return true;
         }
 
         /// <summary>
-        /// 写 whitelist.txt。原子替换：先写 .tmp 再 File.Replace。
-        /// 不再 catch 静默异常：让调用方决定如何提示用户。
-        /// 调用方必须已持有 WhitelistLock。
+        /// 构造 whitelist.txt 的完整内容（仅读 UserWhitelist，调用方必须持有 WhitelistLock）。
         /// </summary>
-        private bool WriteWhitelistFile()
+        private string BuildWhitelistContent()
         {
             var sb = new StringBuilder();
             sb.AppendLine("# 每行一个进程名（含或不含 .exe），保护它们不被 WorkingSet 削减。");
@@ -160,11 +203,19 @@ namespace Traynexus
             var sorted = new List<string>(UserWhitelist);
             sorted.Sort(StringComparer.OrdinalIgnoreCase);
             foreach (var n in sorted) sb.AppendLine(n);
+            return sb.ToString();
+        }
 
+        /// <summary>
+        /// 把内容原子写入 whitelist.txt（先写 .tmp 再 File.Replace）。
+        /// 纯 I/O 操作，不访问共享状态，无需持锁。
+        /// </summary>
+        private bool TryWriteWhitelistFile(string content)
+        {
             string tmp = WhitelistPath + ".tmp";
             try
             {
-                File.WriteAllText(tmp, sb.ToString(), new UTF8Encoding(false));
+                File.WriteAllText(tmp, content, new UTF8Encoding(false));
                 if (File.Exists(WhitelistPath))
                     File.Replace(tmp, WhitelistPath, null);
                 else
@@ -278,7 +329,11 @@ namespace Traynexus
             return s;
         }
 
-        public void Save()
+        /// <summary>
+        /// 保存 settings.ini（原子写入）。返回 true 表示写盘成功，false 表示失败。
+        /// 调用方可据此提示用户或回滚内存状态。
+        /// </summary>
+        public bool Save()
         {
             // P2-2 修复：原子写入（与 WriteWhitelistFile 一致）
             var sb = new StringBuilder();
@@ -301,29 +356,43 @@ namespace Traynexus
                     File.Replace(tmp, SettingsPath, null);
                 else
                     File.Move(tmp, SettingsPath);
+                return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Log("Settings.Save 失败: " + ex.Message);
                 try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                return false;
             }
         }
 
         public void ReloadWhitelist()
         {
-            lock (WhitelistLock)
+            // 锁外读文件（慢操作）
+            List<string> lines = null;
+            if (File.Exists(WhitelistPath))
             {
-                UserWhitelist.Clear();
-                if (!File.Exists(WhitelistPath)) return;
                 try
                 {
+                    lines = new List<string>();
                     foreach (var line in File.ReadAllLines(WhitelistPath))
                     {
                         var l = line.Trim();
                         if (l.Length == 0 || l.StartsWith("#")) continue;
-                        UserWhitelist.Add(l);
+                        lines.Add(l);
                     }
                 }
-                catch (Exception ex) { Log("ReloadWhitelist 失败: " + ex.Message); }
+                catch (Exception ex) { Log("ReloadWhitelist 失败: " + ex.Message); return; }
+            }
+
+            // 锁内只更新内存状态
+            lock (WhitelistLock)
+            {
+                UserWhitelist.Clear();
+                if (lines != null)
+                {
+                    foreach (var l in lines) UserWhitelist.Add(l);
+                }
             }
         }
 

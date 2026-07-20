@@ -9,6 +9,7 @@ set "CSC=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 if not exist "%CSC%" set "CSC=C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe"
 if not exist "%CSC%" (
   echo [ERROR] csc.exe not found. Install .NET Framework 4.x.
+  pause
   exit /b 1
 )
 
@@ -17,10 +18,13 @@ pushd "%~dp0"
 if not exist bin mkdir bin
 
 echo [1/2] Compiling Traynexus.exe ...
-"%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /debug- /win32icon:resources\tray_default.ico /win32manifest:src\Traynexus\app.manifest /resource:logo_256.png,Traynexus.logo_256.png /resource:logo_128.png,Traynexus.logo_128.png /resource:github_icon.png,Traynexus.github_icon.png /resource:github_icon_white.png,Traynexus.github_icon_white.png /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Management.dll /reference:Microsoft.CSharp.dll /out:bin\Traynexus.exe src\Traynexus\Program.cs src\Traynexus\TrayContext.cs src\Traynexus\ReleasePanel.cs src\Traynexus\MemoryInfo.cs src\Traynexus\MemoryCleaner.cs src\Traynexus\NativeMethods.cs src\Traynexus\IconRenderer.cs src\Traynexus\Settings.cs src\Traynexus\ConfigMigrator.cs src\Traynexus\AutoStartManager.cs src\Traynexus\MainForm.cs src\Traynexus\QuickForm.cs src\Traynexus\BatteryInfo.cs src\Traynexus\OemChargeController.cs
+"%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /debug- /win32icon:resources\tray_default.ico /win32manifest:src\Traynexus\app.manifest /resource:logo_256.png,Traynexus.logo_256.png /resource:logo_128.png,Traynexus.logo_128.png /resource:github_icon.png,Traynexus.github_icon.png /resource:github_icon_white.png,Traynexus.github_icon_white.png /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Management.dll /reference:Microsoft.CSharp.dll /out:bin\Traynexus.exe src\Traynexus\Program.cs src\Traynexus\TrayContext.cs src\Traynexus\ReleasePanel.cs src\Traynexus\MemoryInfo.cs src\Traynexus\MemoryCleaner.cs src\Traynexus\NativeMethods.cs src\Traynexus\IconRenderer.cs src\Traynexus\Settings.cs src\Traynexus\ConfigMigrator.cs src\Traynexus\AutoStartManager.cs src\Traynexus\MainForm.cs src\Traynexus\QuickForm.cs src\Traynexus\BatteryInfo.cs src\Traynexus\OemChargeController.cs src\Traynexus\BrightnessController.cs
 
 if errorlevel 1 (
-  echo [ERROR] Build failed.
+  echo.
+  echo [ERROR] Build failed. See errors above.
+  echo.
+  pause
   popd
   exit /b 1
 )
@@ -30,5 +34,7 @@ REM 纯 WinForms 不再需要 WebView2 运行时依赖
 echo.
 echo [2/2] Build succeeded: %CD%\bin\Traynexus.exe
 for %%F in (bin\Traynexus.exe) do echo Size: %%~zF bytes
+echo.
+pause
 popd
 endlocal
