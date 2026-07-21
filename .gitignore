@@ -45,7 +45,11 @@ Desktop.ini
 .workbuddy/
 
 # ---------- 内部 / 归档（不对外开源）----------
-.zcode/           # 编辑器/规划会话临时数据
-_attic/           # 历史归档：不参与编译的旧原型与文档
-deliverables/     # 内部规划文档（PRD / 架构），非产品运行时所需
-build_log.txt     # 本地构建日志（.txt 不在上面的 *.log 规则内）
+# 编辑器/规划会话临时数据
+.zcode/
+# 历史归档：不参与编译的旧原型与文档
+_attic/
+# 内部规划文档（PRD / 架构），非产品运行时所需
+deliverables/
+# 本地构建日志（.txt 不在上面的 *.log 规则内）
+build_log.txt
