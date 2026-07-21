@@ -15,7 +15,7 @@
 ![.NET](https://img.shields.io/badge/.NET-Framework%204.x-512BD4)
 ![Language](https://img.shields.io/github/languages/top/576581737-hub/traynexus)
 ![Build](https://github.com/576581737-hub/traynexus/actions/workflows/build.yml/badge.svg)
-![Version](https://img.shields.io/badge/version-v1.0720.3-blue)
+![Version](https://img.shields.io/badge/version-v1.0721.0-blue)
 ![Size](https://img.shields.io/badge/size-~300%20KB-green)
 
 ---
@@ -32,7 +32,7 @@
 | 主控制台 UI | ✅ | 单 exe WinForms + GDI+ 自绘（概览 / 内存释放 / 充电管理 / 亮度 / 诊断 / 设置 / 关于） |
 | 功能诊断面板 | ✅ | 4 张可折叠卡片，检测各功能依赖状态 + 安装引导 |
 | 图标系统（自绘 lucide） | ✅ | `DrawIcon`：Grid / Memory / Battery / Sun / Cog / Activity / Flash |
-| 计划任务 | ⏳ | 设置页 UI + 持久化已就位，定时执行逻辑待接入 |
+| 计划任务 | ✅ | 夜间保养 + 周末满充已接入（`_scheduleTimer` 定时触发 `CheckSchedule`） |
 
 图例：✅ 已完成 · 🟡 部分完成 · ⏳ 规划中
 
@@ -49,7 +49,14 @@
 
 ## 🚀 快速开始
 
-### 方式一：自己构建（推荐，最简单）
+### 方式一：下载安装（普通用户）
+
+前往 **[Releases](https://github.com/576581737-hub/traynexus/releases)** 下载：
+
+- **安装版** `Traynexus-Setup-*.exe`：标准安装（开始菜单 / 桌面快捷方式 / 卸载程序）
+- **便携版** `Traynexus-Portable-*.zip`：解压即用，无需安装
+
+### 方式二：自己构建（开发者，最简单）
 
 ```bat
 :: 发布构建（生成 bin\Traynexus.exe）
@@ -61,13 +68,13 @@ build_debug.bat
 
 构建脚本调用系统自带的 `csc.exe`，**不依赖任何安装过的开发工具**。构建日志同时写入 `build_log.txt`。
 
-### 方式二：从 CI 制品获取
+### 方式三：从 CI 制品获取
 
 每次 push 都会通过 GitHub Actions 自动构建，可在 **Actions → Build → Artifacts** 下载 `Traynexus.exe`。
 
 ### 运行
 
-1. 右键以管理员身份启动 `bin\Traynexus.exe`
+1. 右键以管理员身份启动 `Traynexus.exe`
 2. 托盘常驻：左键呼出速览面板，右键呼出菜单（控制台 / 退出）
 3. 控制台：托盘右键 → 控制台，或双击托盘图标
 4. 充电控制：需安装对应厂商的电源管理驱动（见下方「OEM 充电支持矩阵」）
@@ -102,39 +109,41 @@ build_debug.bat
 ```
 Traynexus/
 ├── src/
-│   ├── Traynexus/             # C# 源码（全部参与编译）
-│   │   ├── Program.cs             # 入口
-│   │   ├── TrayContext.cs         # 托盘生命周期（图标 · 菜单 · 定时器 · 电池采集）
-│   │   ├── IconRenderer.cs        # 双环托盘图标 GDI+ 渲染 + LogoLoader
-│   │   ├── MainForm.cs            # 主控制台（含所有自绘控件 + 诊断页）
-│   │   ├── QuickForm.cs           # 左键速览悬浮窗（Layered Window）
-│   │   ├── ReleasePanel.cs        # 独立「内存释放」面板
-│   │   ├── MemoryCleaner.cs       # 内存清理引擎（StandbyList + WorkingSet）
-│   │   ├── MemoryInfo.cs          # 内存快照采集
-│   │   ├── BatteryInfo.cs         # 电池状态采集（WMI + powercfg HTML 兜底）
-│   │   ├── BrightnessController.cs# 亮度控制（WMI WmiMonitorBrightnessMethods）
-│   │   ├── OemChargeController.cs # OEM 充电阈值控制（Lenovo / ASUS IOCTL）
-│   │   ├── NativeMethods.cs       # P/Invoke 声明（CreateFileW / DeviceIoControl 等）
-│   │   ├── Settings.cs            # settings.ini + whitelist.txt 读写
-│   │   ├── ConfigMigrator.cs      # MemTrayCN → Traynexus 配置迁移
-│   │   ├── AutoStartManager.cs    # 开机自启
-│   │   └── app.manifest           # requireAdministrator + DPI-aware
-│   └── ui/                       # WebView2 时期的 UI 原型（当前未参与编译）
+│   └── Traynexus/             # C# 源码（全部参与编译）
+│       ├── Program.cs             # 入口
+│       ├── TrayContext.cs         # 托盘生命周期（图标 · 菜单 · 定时器 · 电池采集 · 计划任务）
+│       ├── IconRenderer.cs        # 双环托盘图标 GDI+ 渲染 + LogoLoader
+│       ├── MainForm.cs            # 主控制台（含所有自绘控件 + 诊断页）
+│       ├── QuickForm.cs           # 左键速览悬浮窗（Layered Window）
+│       ├── ReleasePanel.cs        # 独立「内存释放」面板
+│       ├── MemoryCleaner.cs       # 内存清理引擎（StandbyList + WorkingSet）
+│       ├── MemoryInfo.cs          # 内存快照采集
+│       ├── BatteryInfo.cs         # 电池状态采集（WMI + powercfg HTML 兜底）
+│       ├── BrightnessController.cs# 亮度控制（WMI WmiMonitorBrightnessMethods）
+│       ├── OemChargeController.cs # OEM 充电阈值控制（Lenovo / ASUS IOCTL）
+│       ├── NativeMethods.cs       # P/Invoke 声明（CreateFileW / DeviceIoControl 等）
+│       ├── Settings.cs            # settings.ini + whitelist.txt 读写
+│       ├── ConfigMigrator.cs      # MemTrayCN → Traynexus 配置迁移
+│       ├── Fonts.cs               # 静态共享 Font 实例（消除 GDI+ 句柄泄漏）
+│       ├── AutoStartManager.cs    # 开机自启（schtasks）
+│       └── app.manifest           # requireAdministrator + DPI-aware
 ├── resources/
 │   └── tray_default.ico         # 多尺寸品牌 ico（16/32/48/64/128/256）
-├── logo_128/256/512.png         # 内嵌资源（供 LogoLoader）
-├── github_icon.png / _white.png # 关于页 GitHub 行图标
-├── docs/                        # 工程文档（代码审计等）
+├── logo_128.png / logo_256.png  # 内嵌资源（供 LogoLoader）
+├── github_icon.png / github_icon_white.png # 关于页 GitHub 行图标
+├── docs/                        # 工程文档（预留目录）
 ├── build.bat                    # 发布构建
 ├── build_debug.bat              # 调试构建
 ├── build.rsp                    # csc.exe 响应文件（Git Bash / CI 编译用）
+├── installer/
+│   └── Traynexus.iss            # Inno Setup 安装脚本（图标统一为 tray_default.ico）
 ├── .github/workflows/build.yml  # GitHub Actions 自动构建
 ├── LICENSE                      # MIT
 ├── README.md
 └── CHANGELOG.md
 ```
 
-> `bin/`（构建产物）、`lib/`、`_attic/`、`deliverables/` 等目录已被 `.gitignore` 排除，不纳入仓库。
+> `bin/`（构建产物）、`lib/`、`_attic/`、`deliverables/`、`.zcode/` 等目录已被 `.gitignore` 排除，不纳入仓库。
 
 ---
 
@@ -167,7 +176,12 @@ Traynexus/
 ### 设置
 - **通用**：开机自启（schtasks）
 - **内存**：释放方式 / 阈值触发 / 白名单编辑 / 配置文件夹
-- **计划**：夜间保养 / 周末满充 / 会议免扰（持久化已就位，定时执行待接入）
+- **计划**：夜间保养 / 周末满充（定时执行已接入，会议免扰规划中）
+
+### 计划任务
+- **夜间保养**：到设定时段自动切到保养模式（60%），离开时段恢复
+- **周末满充**：周末自动切到正常模式（100%），工作日恢复保养
+- 由 `TrayContext._scheduleTimer` 每分钟轮询 `CheckSchedule()` 驱动
 
 ---
 
@@ -234,7 +248,7 @@ Windows 下 csc 参数含 `\` 会被 MSYS 转义，用响应文件：
 - 提 Bug 请附：**Windows 版本 + .NET Framework 版本 + 复现步骤 + `error.log`（若有）**
 - 提功能建议请在 Issue 中描述使用场景
 - 代码风格：保持现有纯 WinForms + GDI+ 自绘路线，不引入外部运行时依赖
-- 计划任务、ASUS 充电上限读取、Dell/HP 支持均为当前开放任务，欢迎认领
+- ASUS 充电上限读取、Dell/HP 支持为当前开放任务，欢迎认领
 
 ---
 
@@ -252,5 +266,6 @@ Windows 下 csc 参数含 `\` 会被 MSYS 转义，用响应文件：
 - **Battery care** — OEM charge-threshold control (Lenovo `\\.\EnergyDrv` IOCTL is fully supported; ASUS partial; Dell/HP planned).
 - **Brightness control** — built-in display brightness via WMI `WmiMonitorBrightnessMethods`.
 - **Diagnostics** — collapsible cards that probe each feature's driver/WMI/service dependencies.
+- **Scheduled tasks** — nightly battery care and weekend full-charge, driven by an in-app timer.
 
 Built with plain WinForms + GDI+ (no WebView2, no NuGet runtime packages). Requires .NET Framework 4.x (ships with Windows) and administrator rights for memory trimming. Build with the bundled `build.bat` (uses the system `csc.exe`); no Visual Studio or .NET SDK needed. Licensed under MIT.
