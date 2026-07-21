@@ -4,6 +4,30 @@
 
 ---
 
+## v1.0721.0 - 2026-07-21（首个公开 Release：安装版 + 便携版 + 仓库清理）
+
+### 发布
+- 首个公开 GitHub Release（tag `v1.0721.0`），资产：
+  - 安装版 `Traynexus-Setup-1.0721.0.exe`（Inno Setup 6 构建）
+  - 便携版 `Traynexus-Portable-1.0721.0.zip`（解压即用）
+- 安装包 / 卸载程序 / 桌面及开始菜单快捷方式图标统一为 `resources/tray_default.ico`
+  （`SetupIconFile` + `UninstallDisplayIcon={app}\Traynexus.exe` + 快捷方式 `IconFilename` 一致）
+
+### 仓库清理
+- 修正 `.gitignore` 排除规则：原行内注释（`pattern  # comment`）导致模式失效，改为独立注释行
+- 移出误跟踪的内部目录：`.zcode/` `deliverables/` `_attic/`（`git rm --cached`，本地保留）
+- 移出无关文件：`src/ui/`（WebView 原型残留，无宿主加载）、`docs/` 内部审计/规划文档、`logo_512.png`（未嵌入构建）
+- 新增 `.gitattributes`（强制 `*.bat`/`*.cmd` 用 CRLF，根治历史 build.bat 闪退）
+- 新增 GitHub Actions 自动构建（`.github/workflows/build.yml`，`csc @build.rsp`）
+
+### 文档
+- README 重写：版本徽章对齐 v1.0721.0、目录结构修正（移除已删文件、补 Fonts.cs/installer）、功能特性补充计划任务（✅ 已接入）、新增 Releases 下载入口、英文摘要同步
+
+### 已知待办（本轮重新编译时处理）
+- 应用内版本标签（`MainForm.cs` `lblVer` 仍为 `v1.0717.3`）与发布号 `v1.0721.0` 待统一，提权重新构建后对齐
+
+---
+
 ## v1.0720.4 - 2026-07-20（Font 静态共享 + GitHub 开源链接）
 
 ### P1 资源泄漏修复（审计 P1-1）
