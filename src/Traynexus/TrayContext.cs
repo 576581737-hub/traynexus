@@ -35,6 +35,11 @@ namespace Traynexus
         private DateTime _lastAutoReleaseTime = DateTime.MinValue;
         private static readonly TimeSpan AutoReleaseCooldown = TimeSpan.FromSeconds(60);
 
+        // 计划任务定时器（夜间保养 + 周末满充）
+        private System.Windows.Forms.Timer _scheduleTimer;
+        private bool _nightCareActive;       // 夜间保养当前是否激活
+        private bool _weekendChargeActive;   // 周末满充当前是否激活
+
         // 迁移通知
         private string _pendingMigrationNotice;
         private string _pendingConflictNotice;
@@ -89,6 +94,13 @@ namespace Traynexus
 
             TickRefresh();
             BatteryTick();
+
+            // 计划任务定时器（每分钟检查一次夜间保养/周末满充）
+            _scheduleTimer = new System.Windows.Forms.Timer();
+            _scheduleTimer.Interval = 60000;
+            _scheduleTimer.Tick += (s, e) => CheckSchedule();
+            _scheduleTimer.Start();
+            CheckSchedule();   // 启动时立即检查一次
         }
 
         // ============================================================
@@ -277,6 +289,81 @@ namespace Traynexus
         }
 
         // ============================================================
+        // 计划任务：夜间保养 + 周末满充
+        // ============================================================
+        private void CheckSchedule()
+        {
+            try
+            {
+                var now = DateTime.Now;
+                int hour = now.Hour;
+                DayOfWeek dow = now.DayOfWeek;
+                bool isWeekend = dow == DayOfWeek.Saturday || dow == DayOfWeek.Sunday;
+
+                // 周末满充：周六/周日 0:00-8:00 设满电模式（优先级高于夜间保养）
+                if (_settings.WeekendFullCharge && isWeekend && hour >= 0 && hour < 8)
+                {
+                    if (!_weekendChargeActive)
+                    {
+                        _weekendChargeActive = true;
+                        _nightCareActive = false;   // 周末满充优先
+                        SetChargeModeForSchedule(100);   // 满电模式
+                        ShowBalloon("周末满充准备", "已自动切换为满电模式，充电至 100%。");
+                    }
+                    return;
+                }
+                else if (_weekendChargeActive)
+                {
+                    // 周末满充时段结束，恢复用户设定
+                    _weekendChargeActive = false;
+                    RestoreUserChargeMode();
+                }
+
+                // 夜间保养：22:00-07:00 设保养模式（60%）
+                if (_settings.NightCareEnabled && (hour >= 22 || hour < 7))
+                {
+                    if (!_nightCareActive)
+                    {
+                        _nightCareActive = true;
+                        SetChargeModeForSchedule(60);   // 保养模式
+                        ShowBalloon("夜间自动保养", "已自动切换为保养模式，充电上限 60%。");
+                    }
+                }
+                else if (_nightCareActive)
+                {
+                    // 夜间保养时段结束，恢复用户设定
+                    _nightCareActive = false;
+                    RestoreUserChargeMode();
+                }
+            }
+            catch (Exception ex) { Settings.Log("CheckSchedule 失败: " + ex.Message); }
+        }
+
+        /// <summary>计划任务专用：设置充电模式（不影响用户的 ChargeMode 设置，只改实际充电状态）</summary>
+        private void SetChargeModeForSchedule(int limit)
+        {
+            try
+            {
+                var cap = OemChargeController.GetCapability();
+                if (cap.Supported)
+                    OemChargeController.SetChargeLimit(limit);
+            }
+            catch (Exception ex) { Settings.Log("SetChargeModeForSchedule 失败: " + ex.Message); }
+        }
+
+        /// <summary>恢复用户设定的充电模式</summary>
+        private void RestoreUserChargeMode()
+        {
+            try
+            {
+                var cap = OemChargeController.GetCapability();
+                if (cap.Supported)
+                    OemChargeController.SetChargeLimit(_settings.ChargeLimit);
+            }
+            catch (Exception ex) { Settings.Log("RestoreUserChargeMode 失败: " + ex.Message); }
+        }
+
+        // ============================================================
         // 其他
         // ============================================================
         private void ShowPendingNotices()
@@ -320,6 +407,7 @@ namespace Traynexus
                     if (_mainForm != null && !_mainForm.IsDisposed) { try { _mainForm.Close(); } catch { } }
                     _timer.Stop(); _timer.Dispose();
                     _batteryTimer.Stop(); _batteryTimer.Dispose();
+                    if (_scheduleTimer != null) { _scheduleTimer.Stop(); _scheduleTimer.Dispose(); }
                     _tray.Visible = false;
                     if (_tray.ContextMenuStrip != null) { try { _tray.ContextMenuStrip.Dispose(); } catch { } }
                     _tray.Dispose();

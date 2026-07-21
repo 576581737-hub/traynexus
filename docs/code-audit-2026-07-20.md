@@ -491,10 +491,12 @@ protected override void OnPaintBackground(PaintEventArgs pevent) { }
 19. ~~P3~~：error.log 1MB 截断
 20. ~~P3~~：app.manifest supportedOS 收敛到 Win 10+
 
+### ✅ v1.0720.4 已修复
+21. ~~P1-1~~：MainForm Font 静态共享（提取 `Fonts` 静态类，74 处 `new Font()` 全部替换；QuickForm 4 处 Paint 内 Font 纳入共享；修复 OnPaint 内 `using` 包裹共享 Font 的 Dispose 陷阱）
+
 ### 🔵 未修复（设计中 / 留给下个迭代）
-21. **P1**（外部报告 #7）：实现 ASUS `QueryAsusLimit`（DSTS 返回值解析），或明确标注"ASUS 不支持回读"。需真实 ASUS 机型验证
-22. **P2**：MainForm Font 静态共享（提取 `Fonts` 静态类），当前页面缓存机制下泄漏场景有限
-23. **P3-1**：MainForm.cs 拆文件（3705 行巨石 → Controls/ + Pages/）
+22. **P1**（外部报告 #7）：实现 ASUS `QueryAsusLimit`（DSTS 返回值解析），或明确标注"ASUS 不支持回读"。需真实 ASUS 机型验证
+23. **P3-1**：MainForm.cs 拆文件（3294 行巨石 -> Controls/ + Pages/）
 24. ~~P3-3~~：已决策仅中文，无需处理
 
 ---

@@ -95,7 +95,7 @@ namespace Traynexus
             this.FormBorderStyle = FormBorderStyle.FixedSingle;   // 固定尺寸，防拖拽
             this.Icon = LogoLoader.GetWindowIcon() ?? IconRenderer.Build(50, 0, false);
             this.BackColor = CPanel;
-            this.Font = new Font(Fnt, 9f);
+            this.Font = Fonts.S9;
 
             BuildBody();
 
@@ -237,7 +237,7 @@ namespace Traynexus
             lblVer.AutoEllipsis = true;
             lblVer.TextAlign = ContentAlignment.MiddleCenter;
             lblVer.ForeColor = CInk3;
-            lblVer.Font = new Font(Fnt, 8f);
+            lblVer.Font = Fonts.S8;
             footer.Controls.Add(lblVer);
 
             var btnAboutRow = new Panel();
@@ -246,7 +246,7 @@ namespace Traynexus
 
             var btnAbout = new FlatBorderedButton();
             btnAbout.Text = "关于 TrayNexus";
-            btnAbout.Font = new Font(Fnt, 9.5f, FontStyle.Bold);
+            btnAbout.Font = Fonts.S95B;
             btnAbout.Size = new Size(160, 34);
             btnAbout.Cursor = Cursors.Hand;
             btnAbout.Click += (s, e) => NavigateToAbout();
@@ -347,14 +347,14 @@ namespace Traynexus
 
             var btnRel = new FlatBorderedButton();
             btnRel.Text = "内存释放";
-            btnRel.Font = new Font(Fnt, 9.5f);
+            btnRel.Font = Fonts.S95;
             btnRel.Dock = DockStyle.Fill;
             btnRel.Margin = new Padding(0, 0, 8, 0);   // 与卡片列间距 16px (8+8) 对齐
             btnRel.Click += (s, e) => NavigateTo(1);
 
             var btnChg = new FlatBorderedButton();
             btnChg.Text = "充电管理";
-            btnChg.Font = new Font(Fnt, 9.5f);
+            btnChg.Font = Fonts.S95;
             btnChg.Dock = DockStyle.Fill;
             btnChg.Margin = new Padding(8, 0, 0, 0);   // 与卡片列间距 16px (8+8) 对齐
             btnChg.Click += (s, e) => NavigateTo(2);
@@ -370,7 +370,7 @@ namespace Traynexus
 
             var lblH = new Label();
             lblH.Text = "概览";
-            lblH.Font = new Font(Fnt, 15f, FontStyle.Bold);
+            lblH.Font = Fonts.S15B;
             lblH.ForeColor = CInk;
             lblH.AutoSize = false;
             lblH.Size = new Size(300, 40);
@@ -380,7 +380,7 @@ namespace Traynexus
 
             var lblD = new Label();
             lblD.Text = "系统资源一体化状态总览，点击左侧导航进入对应模块。";
-            lblD.Font = new Font(Fnt, 9f);
+            lblD.Font = Fonts.S9;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
             lblD.Size = new Size(700, 22);
@@ -415,7 +415,7 @@ namespace Traynexus
             // 用 Resize 事件手动重定位，避免 Anchor.Right 依赖 cardBri 初始 Width 导致的漂移/裁切
             var lblScreen = new Label();
             lblScreen.Text = "主屏幕";
-            lblScreen.Font = new Font(Fnt, 10f, FontStyle.Bold);          // 加粗字号 +1（9→10pt Bold）
+            lblScreen.Font = Fonts.S10B;          // 加粗字号 +1（9->10pt Bold）
             lblScreen.ForeColor = Color.FromArgb(255, 176, 32);           // #FFB020 琥珀
             lblScreen.AutoSize = false;
             lblScreen.TextAlign = ContentAlignment.MiddleRight;
@@ -486,7 +486,7 @@ namespace Traynexus
 
             var lblT = new Label();
             lblT.Text = title;
-            lblT.Font = new Font(Fnt, 10f, FontStyle.Bold);
+            lblT.Font = Fonts.S10B;
             lblT.ForeColor = CInk;
             lblT.AutoSize = true;
             lblT.Location = new Point(58, 24);
@@ -494,7 +494,7 @@ namespace Traynexus
 
             big = new Label();
             big.Text = "--";
-            big.Font = new Font(Fnt, 22f, FontStyle.Bold);
+            big.Font = Fonts.S22B;
             big.ForeColor = CInk;
             big.AutoSize = true;
             big.Location = new Point(20, 62);
@@ -502,7 +502,7 @@ namespace Traynexus
 
             sub = new Label();
             sub.Text = "";
-            sub.Font = new Font(Fnt, 9f);
+            sub.Font = Fonts.S9;
             sub.ForeColor = CInk2;
             sub.AutoSize = true;
             sub.Location = new Point(20, 116);
@@ -627,7 +627,7 @@ namespace Traynexus
             // === 标题 ===
             var lblT = new Label();
             lblT.Text = "充电模式";
-            lblT.Font = new Font(Fnt, 14f, FontStyle.Bold);
+            lblT.Font = Fonts.S14B;
             lblT.ForeColor = CInk;
             lblT.AutoSize = false;
             lblT.Height = 34;
@@ -668,7 +668,7 @@ namespace Traynexus
 
             var lblCap = new Label();
             lblCap.Text = "自定义充电上限";
-            lblCap.Font = new Font(Fnt, 10f, FontStyle.Bold);
+            lblCap.Font = Fonts.S10B;
             lblCap.ForeColor = CInk;
             lblCap.AutoSize = false;
             lblCap.Size = new Size(200, 24);
@@ -677,7 +677,7 @@ namespace Traynexus
             capRow.Controls.Add(lblCap);
 
             _bcHint = new Label();
-            _bcHint.Font = new Font(Fnt, 9f);
+            _bcHint.Font = Fonts.S9;
             _bcHint.ForeColor = CInk2;
             _bcHint.AutoSize = false;
             _bcHint.Size = new Size(500, 24);
@@ -697,7 +697,7 @@ namespace Traynexus
 
             var lblLimit = new Label();
             lblLimit.Text = "上限";
-            lblLimit.Font = new Font(Fnt, 9f);
+            lblLimit.Font = Fonts.S9;
             lblLimit.ForeColor = CInk2;
             lblLimit.Location = new Point(16, 15);
             lblLimit.AutoSize = true;
@@ -714,7 +714,7 @@ namespace Traynexus
 
             _bcVal = new Label();
             _bcVal.Text = _bcTrack.Value + "%";
-            _bcVal.Font = new Font(Fnt, 10f, FontStyle.Bold);
+            _bcVal.Font = Fonts.S10B;
             _bcVal.ForeColor = CBlue;
             _bcVal.TextAlign = ContentAlignment.MiddleRight;
             _bcVal.AutoSize = false;
@@ -768,7 +768,7 @@ namespace Traynexus
             // === "充电与电源" 标签 + 两行只读状态 ===
             var lblHm = new Label();
             lblHm.Text = "充电与电源";
-            lblHm.Font = new Font(Fnt, 10f, FontStyle.Bold);
+            lblHm.Font = Fonts.S10B;
             lblHm.ForeColor = CInk;
             lblHm.AutoSize = false;
             lblHm.Height = 24;
@@ -784,7 +784,7 @@ namespace Traynexus
             // === "电池健康" 大标题 ===
             var lblBH = new Label();
             lblBH.Text = "电池健康";
-            lblBH.Font = new Font(Fnt, 12f, FontStyle.Bold);
+            lblBH.Font = Fonts.S12B;
             lblBH.ForeColor = CInk;
             lblBH.AutoSize = false;
             lblBH.Height = 30;
@@ -810,7 +810,7 @@ namespace Traynexus
             var lblGood = new Label();
             _healthLabel = lblGood;
             lblGood.Text = "--";
-            lblGood.Font = new Font(Fnt, 10f, FontStyle.Bold);
+            lblGood.Font = Fonts.S10B;
             lblGood.ForeColor = CInk;
             lblGood.AutoSize = true;
             lblGood.Location = new Point(94, 18);
@@ -819,7 +819,7 @@ namespace Traynexus
             var lblStat = new Label();
             _healthStat = lblStat;
             lblStat.Text = "--";
-            lblStat.Font = new Font(Fnt, 8.5f);
+            lblStat.Font = Fonts.S85;
             lblStat.ForeColor = CInk2;
             lblStat.AutoSize = true;
             lblStat.Location = new Point(94, 42);
@@ -828,7 +828,7 @@ namespace Traynexus
             var lblStat2 = new Label();
             _healthStat2 = lblStat2;
             lblStat2.Text = "--";
-            lblStat2.Font = new Font(Fnt, 8.5f);
+            lblStat2.Font = Fonts.S85;
             lblStat2.ForeColor = CInk2;
             lblStat2.AutoSize = true;
             lblStat2.Location = new Point(94, 62);
@@ -836,7 +836,7 @@ namespace Traynexus
 
             var btnReport = new FlatBorderedButton();
             btnReport.Text = "健康报告";
-            btnReport.Font = new Font(Fnt, 9f);
+            btnReport.Font = Fonts.S9;
             btnReport.Size = new Size(180, 30);
             btnReport.Location = new Point(16, 90);
             btnReport.Click += (s, e) =>
@@ -887,7 +887,7 @@ namespace Traynexus
 
             var btnCalib = new FlatBorderedButton();
             btnCalib.Text = "电池校准";
-            btnCalib.Font = new Font(Fnt, 9f);
+            btnCalib.Font = Fonts.S9;
             btnCalib.Size = new Size(180, 30);
             btnCalib.Location = new Point(206, 90);
             btnCalib.Click += (s, e) => MessageBox.Show(this,
@@ -960,7 +960,7 @@ namespace Traynexus
 
             var lbl = new Label();
             lbl.Text = title;
-            lbl.Font = new Font(Fnt, 9f);
+            lbl.Font = Fonts.S9;
             lbl.ForeColor = CInk2;
             lbl.AutoSize = false;
             lbl.Location = new Point(0, 0);
@@ -970,10 +970,10 @@ namespace Traynexus
 
             var val = new Label();
             val.Text = "--";
-            val.Font = new Font(Fnt, 9f, FontStyle.Bold);
+            val.Font = Fonts.S9B;
             val.ForeColor = CInk;
             val.AutoSize = false;
-            val.Size = new Size(160, 30);
+            val.Size = new Size(210, 30);
             val.TextAlign = ContentAlignment.MiddleRight;
             val.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             row.Controls.Add(val);
@@ -1008,12 +1008,12 @@ namespace Traynexus
                             {
                                 if (status.LimitPercent <= 80 && batt.Percent >= status.LimitPercent)
                                 {
-                                    chargeText = "保养中·暂停充电";
+                                    chargeText = "保养模式·已暂停充电";
                                     chargeColor = CBlue;
                                 }
                                 else if (status.LimitPercent <= 80)
                                 {
-                                    chargeText = "保养中·充电至" + status.LimitPercent + "%";
+                                    chargeText = "保养模式·充电上限" + status.LimitPercent + "%";
                                     chargeColor = CBlue;
                                 }
                             }
@@ -1246,7 +1246,7 @@ namespace Traynexus
             // 大标题
             var lblH = new Label();
             lblH.Text = "亮度";
-            lblH.Font = new Font(Fnt, 15f, FontStyle.Bold);
+            lblH.Font = Fonts.S15B;
             lblH.ForeColor = CInk;
             lblH.AutoSize = false;
             lblH.Height = 36;
@@ -1257,7 +1257,7 @@ namespace Traynexus
             // 副标题
             var lblD = new Label();
             lblD.Text = "统一管理多显示器亮度，支持自动亮度。";
-            lblD.Font = new Font(Fnt, 9f);
+            lblD.Font = Fonts.S9;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
             lblD.Height = 22;
@@ -1268,7 +1268,7 @@ namespace Traynexus
             // "自动亮度" 小节标题
             var lblAuto = new Label();
             lblAuto.Text = "自动亮度";
-            lblAuto.Font = new Font(Fnt, 10f, FontStyle.Bold);
+            lblAuto.Font = Fonts.S10B;
             lblAuto.ForeColor = CInk;
             lblAuto.AutoSize = false;
             lblAuto.Height = 24;
@@ -1283,7 +1283,7 @@ namespace Traynexus
             autoRow.BackColor = CPanel;
             var lblAutoDesc = new Label();
             lblAutoDesc.Text = "根据系统环境光自动调节";
-            lblAutoDesc.Font = new Font(Fnt, 9f);
+            lblAutoDesc.Font = Fonts.S9;
             lblAutoDesc.ForeColor = CInk;
             lblAutoDesc.AutoSize = false;
             lblAutoDesc.Size = new Size(240, 32);
@@ -1310,12 +1310,12 @@ namespace Traynexus
             // 查找显示器按钮 -> 重新枚举并刷新卡片
             var btnFind = new FlatBorderedButton();
             btnFind.Text = "🔍 查找显示器";
-            btnFind.Font = new Font(Fnt, 9.5f);
+            btnFind.Font = Fonts.S95;
             btnFind.Size = new Size(140, 32);
             btnFind.Margin = new Padding(0, 0, 0, 8);
             // 标签声明提前供 btnFind lambda 引用
             var lblStatus = new Label();
-            lblStatus.Font = new Font(Fnt, 9f);
+            lblStatus.Font = Fonts.S9;
             lblStatus.ForeColor = CGreen;
             lblStatus.AutoSize = false;
             lblStatus.Height = 22;
@@ -1335,7 +1335,7 @@ namespace Traynexus
                     lblStatus.Text = "已检测到 " + monitors.Count + " 个显示器 · 支持亮度调节";
                     lblStatus.ForeColor = CGreen;
                     foreach (var m in monitors)
-                        flow.Controls.Add(MakeMonitorCard(m.Name, m.Brightness));
+                        flow.Controls.Add(MakeMonitorCard(m));
                 }
                 else
                 {
@@ -1362,7 +1362,7 @@ namespace Traynexus
 
             // 显示器卡片
             foreach (var m in initMonitors)
-                flow.Controls.Add(MakeMonitorCard(m.Name, m.Brightness));
+                flow.Controls.Add(MakeMonitorCard(m));
 
             // 宽度联动 (查找显示器按钮除外——保持 140 固定宽度)
             flow.Layout += (s, e) => SyncBrightWidth(flow, btnFind);
@@ -1385,23 +1385,28 @@ namespace Traynexus
         }
 
         /// <summary>显示器亮度卡片：标题左 + 数值右，下方 亮度 + 滑块</summary>
-        private RoundedCard MakeMonitorCard(string name, int val)
+        private RoundedCard MakeMonitorCard(MonitorInfo monitor)
         {
             var card = new RoundedCard();
             card.Height = 84;
             card.Margin = new Padding(0, 0, 0, 12);
 
+            // 内置屏蓝色，外接屏紫色
+            Color accentColor = monitor.IsInternal ? CBlue : CPurple;
+            int val = Math.Max(0, monitor.Brightness);
+            bool canControl = monitor.IsInternal || monitor.DdcSupported;
+
             var lblN = new Label();
-            lblN.Text = name;
-            lblN.Font = new Font(Fnt, 10f, FontStyle.Bold);
+            lblN.Text = monitor.Name;
+            lblN.Font = Fonts.S10B;
             lblN.ForeColor = CInk;
             lblN.AutoSize = true;
             lblN.Location = new Point(16, 12);
             card.Controls.Add(lblN);
 
             var lblV = new Label();
-            lblV.Text = val + "%";
-            lblV.Font = new Font(Fnt, 9f);
+            lblV.Text = (monitor.Brightness >= 0 ? monitor.Brightness + "%" : "--");
+            lblV.Font = Fonts.S9;
             lblV.ForeColor = CInk2;
             lblV.TextAlign = ContentAlignment.MiddleRight;
             lblV.AutoSize = false;
@@ -1411,25 +1416,24 @@ namespace Traynexus
 
             var lblB = new Label();
             lblB.Text = "亮度";
-            lblB.Font = new Font(Fnt, 9f);
+            lblB.Font = Fonts.S9;
             lblB.ForeColor = CInk2;
             lblB.Location = new Point(16, 44);
             lblB.AutoSize = true;
             card.Controls.Add(lblB);
 
-            // TrackBar 是 Win32 原生控件，thumb 会超出 Size 边界。
-            // Location=(60,38)、height=34 → 中线 y≈55、thumb 底 y≈68；卡片 96 高、下边框在 y≈88，留 20px 余量。
             var tb = new RoundSlider();
-            tb.Minimum = 0; tb.Maximum = 100; tb.Value = Math.Max(0, val);
-            tb.AccentColor = CBlue;
+            tb.Minimum = 0; tb.Maximum = 100; tb.Value = val;
+            tb.AccentColor = accentColor;
             tb.Location = new Point(60, 50);
             tb.Size = new Size(200, 16);
             tb.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            if (!canControl) tb.Enabled = false;
             tb.ValueChanged += (s, e) =>
             {
                 lblV.Text = tb.Value + "%";
-                // 拖动滑块时实时设置亮度（仅内置屏支持）
-                try { BrightnessController.SetBrightness(tb.Value); } catch { }
+                // 按显示器类型调亮度（内置走 WMI，外接走 DDC/CI）
+                try { BrightnessController.SetBrightness(monitor, tb.Value); } catch { }
             };
             card.Controls.Add(tb);
 
@@ -1464,7 +1468,7 @@ namespace Traynexus
             // 大标题
             var lblH = new Label();
             lblH.Text = "设置";
-            lblH.Font = new Font(Fnt, 15f, FontStyle.Bold);
+            lblH.Font = Fonts.S15B;
             lblH.ForeColor = CInk;
             lblH.AutoSize = false;
             lblH.Height = 36;
@@ -1476,7 +1480,7 @@ namespace Traynexus
             // 副标题
             var lblD = new Label();
             lblD.Text = "基础模块参数配置中心。";
-            lblD.Font = new Font(Fnt, 9f);
+            lblD.Font = Fonts.S9;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
             lblD.Height = 22;
@@ -1499,7 +1503,7 @@ namespace Traynexus
                 int idx = i;
                 var b = new SubTabButton();
                 b.Text = tabNames[i];
-                b.Font = new Font(Fnt, 9.5f, FontStyle.Bold);
+                b.Font = Fonts.S95B;
                 b.Size = new Size(78, 32);
                 b.Location = new Point(i * 86, 0);
                 if (tabNames[i] == "关于") b.Visible = false;
@@ -1587,7 +1591,7 @@ namespace Traynexus
             header.BackColor = CPanel;
             var lblH = new Label();
             lblH.Text = "功能诊断";
-            lblH.Font = new Font(Fnt, 15f, FontStyle.Bold);
+            lblH.Font = Fonts.S15B;
             lblH.ForeColor = CInk;
             lblH.AutoSize = false;
             lblH.Size = new Size(300, 36);
@@ -1597,7 +1601,7 @@ namespace Traynexus
 
             var btnRecheck = new FlatBorderedButton();
             btnRecheck.Text = "重新检测";
-            btnRecheck.Font = new Font(Fnt, 9f);
+            btnRecheck.Font = Fonts.S9;
             btnRecheck.Size = new Size(96, 30);
             btnRecheck.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnRecheck.Click += (s, e) =>
@@ -1617,7 +1621,7 @@ namespace Traynexus
             // 副标题
             var lblD = new Label();
             lblD.Text = "检测各功能模块依赖项的安装状态。未就绪项会给出原因和引导。";
-            lblD.Font = new Font(Fnt, 9f);
+            lblD.Font = Fonts.S9;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
             lblD.Height = 22;
@@ -1781,9 +1785,22 @@ namespace Traynexus
                     "解决方法：\r\n" +
                     "更新显卡驱动到最新版本后重试。",
                     "内置屏亮度说明", MessageBoxButtons.OK, MessageBoxIcon.Information)));
-            y4 = AddDiagnosticRow(card4, y4, "外接屏 DDC/CI", "物理显示器硬件支持 DDC/CI 协议",
-                DiagStatus.Pending, "开发中", null, isLast: true);
-            card4.SetSummary(brightWmi ? "1/2就绪" : "待接入", brightWmi ? CBlue : CInk3);
+            bool ddcOk = BrightnessController.IsDdcSupported();
+            y4 = AddDiagnosticRow(card4, y4, "外接屏 DDC/CI", "dxva2 物理显示器 API（DDC/CI 协议）",
+                ddcOk ? DiagStatus.Ready : DiagStatus.Unsupported,
+                ddcOk ? "就绪" : "无外接屏",
+                ddcOk ? null : (Action)(() => MessageBox.Show(this,
+                    "外接屏 DDC/CI 亮度控制需要显示器硬件支持 DDC/CI 协议。\r\n\r\n" +
+                    "当前未检测到支持 DDC/CI 的外接显示器。\r\n\r\n" +
+                    "可能原因：\r\n" +
+                    "1. 无外接显示器\r\n" +
+                    "2. 显示器不支持 DDC/CI（老旧显示器）\r\n" +
+                    "3. 显示器连接线不支持 DDC（部分 HDMI 转接器）\r\n" +
+                    "4. 显卡驱动未启用 DDC/CI 支持",
+                    "外接屏 DDC/CI 说明", MessageBoxButtons.OK, MessageBoxIcon.Information)),
+                isLast: true);
+            int brightReady = (brightWmi ? 1 : 0) + (ddcOk ? 1 : 0);
+            card4.SetSummary(brightReady + "/2就绪", brightReady == 2 ? CGreen : (brightReady == 1 ? CBlue : CInk3));
             flow.Controls.Add(card4);
 
             // 全部卡片添加完后，显式刷新滚动范围
@@ -1843,7 +1860,7 @@ namespace Traynexus
                 {
                     using (var g = body.CreateGraphics())
                     {
-                        var font = new Font(Fnt, 8f);
+                        var font = Fonts.S8;
                         // 副标题宽度右侧留 120 给状态标签，避免文字被标签遮挡
                         int availW = Math.Max(200, body.Width - 32 - 120);
                         var sz = g.MeasureString(desc, font, availW);
@@ -1852,7 +1869,8 @@ namespace Traynexus
                 }
                 catch { }
             }
-            int rowH = 6 + 22 + 4 + descH + 6;   // top + title + gap + desc + bottom（状态标签在右侧垂直居中）
+            // 行高：标题 22 + 间距 4 + 副标题 descH + 底部 6
+            int rowH = 6 + 22 + 4 + descH + 6;
 
             var row = new TransparentPanel();
             row.Location = new Point(16, y);
@@ -1867,34 +1885,37 @@ namespace Traynexus
                 }
             };
 
-            // 标题（第一行，右侧留 120 给状态标签）
+            // 右侧状态区宽度：标签 80 + 按钮 60 + 间距 8 = 148（有按钮时），无按钮时 80+8=88
+            int rightReserve = (onClick != null) ? 152 : 92;
+
+            // 标题（第一行，右侧留 rightReserve 给状态标签）
             var lblN = new Label();
             lblN.Text = name;
-            lblN.Font = new Font(Fnt, 9.5f);
+            lblN.Font = Fonts.S95;
             lblN.ForeColor = CInk;
             lblN.AutoSize = false;
-            lblN.Size = new Size(Math.Max(200, row.Width - 120), 22);
+            lblN.Size = new Size(Math.Max(200, row.Width - rightReserve), 22);
             lblN.TextAlign = ContentAlignment.MiddleLeft;
             lblN.Location = new Point(0, 6);
             lblN.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             lblN.BackColor = Color.Transparent;
             row.Controls.Add(lblN);
 
-            // 副标题（第二行，右侧留 120 给状态标签）
+            // 副标题（第二行，右侧留 rightReserve 给状态标签）
             var lblD = new Label();
             lblD.Text = desc;
-            lblD.Font = new Font(Fnt, 8f);
+            lblD.Font = Fonts.S8;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
-            lblD.Size = new Size(Math.Max(200, row.Width - 120), descH);
+            lblD.Size = new Size(Math.Max(200, row.Width - rightReserve), descH);
             lblD.TextAlign = ContentAlignment.TopLeft;
             lblD.Location = new Point(0, 32);
             lblD.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             lblD.BackColor = Color.Transparent;
             row.Controls.Add(lblD);
 
-            // 状态标签 + 按钮（右侧垂直居中，不另起一行）
-            int statusY = (rowH - 22) / 2;   // 垂直居中
+            // 状态标签 + 按钮（在标题行右侧，和标题同 Y -- 不和副标题重叠）
+            int statusY = 7;   // 和标题行对齐（标题 Y=6, 标签 Y=7 居中微调）
             Color tagColor;
             switch (status)
             {
@@ -1908,7 +1929,7 @@ namespace Traynexus
             var tag = new TagLabel();
             tag.Text = statusText;
             tag.Accent = tagColor;
-            tag.Font = new Font(Fnt, 8f, FontStyle.Bold);
+            tag.Font = Fonts.S8B;
             tag.Size = new Size(80, 22);
             tag.Location = new Point(row.Width - 80, statusY);
             tag.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -1920,7 +1941,7 @@ namespace Traynexus
             {
                 var link = new SoftLinkButton();
                 link.Text = "查看";
-                link.Font = new Font(Fnt, 9f, FontStyle.Bold);
+                link.Font = Fonts.S9B;
                 link.Size = new Size(60, 24);
                 link.Location = new Point(row.Width - 80 - 60 - 8, statusY - 1);
                 link.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -1955,12 +1976,15 @@ namespace Traynexus
                     {
                         int rowW = Math.Max(50, bodyW - 32);
                         row.Width = rowW;
-                        // 同步行内 Label 宽度（右侧留 120 给状态标签）
-                        int lblW = Math.Max(200, rowW - 120);
-                        if (row.Controls.Count >= 2)
+                        // 同步行内标题/副标题 Label 宽度。
+                        // ⚠️ 只能改 Label 类型的子控件：TagLabel(药丸)/SoftLinkButton(按钮)
+                        // 是自绘 Control，位置靠 Anchor.Right + 固定 Size 维持，Width 一旦被覆盖，
+                        // 药丸会横向拉长成"空灰条"、按钮会盖住标题文字（DDC/CI 行 bug 根源）。
+                        // 预留宽度 152 与 AddDiagnosticRow 里"有按钮"的最坏情形一致，避免重叠。
+                        int lblW = Math.Max(200, rowW - 152);
+                        foreach (Control child in row.Controls)
                         {
-                            row.Controls[0].Width = lblW;
-                            row.Controls[1].Width = lblW;
+                            if (child is Label) child.Width = lblW;
                         }
                     }
                 }
@@ -2225,12 +2249,6 @@ namespace Traynexus
                     _settings.WeekendFullCharge = on;
                     _settings.Save();
                 });
-            y = AddSettingsToggleRow(p, y, "会议免扰模式", "检测到全屏会议软件时暂停自动释放",
-                _settings.MeetingDndMode, on =>
-                {
-                    _settings.MeetingDndMode = on;
-                    _settings.Save();
-                });
             return p;
         }
 
@@ -2259,7 +2277,7 @@ namespace Traynexus
             // 主标题：Y=2，Height=24（顶缘 2 与 logo 顶对齐）
             var lblApp = new Label();
             lblApp.Text = "TrayNexus";
-            lblApp.Font = new Font(Fnt, 11f, FontStyle.Bold);
+            lblApp.Font = Fonts.S11B;
             lblApp.ForeColor = CInk;
             lblApp.AutoSize = false;
             lblApp.Size = new Size(200, 24);
@@ -2270,7 +2288,7 @@ namespace Traynexus
             // 副标题：Y=32，Height=20（底缘 52 与 logo 底对齐；主标题底 26 → 6px 段落内空隙）
             var lblSlog = new Label();
             lblSlog.Text = "系统资源一体化管家";
-            lblSlog.Font = new Font(Fnt, 8f);
+            lblSlog.Font = Fonts.S8;
             lblSlog.ForeColor = CInk2;
             lblSlog.AutoSize = false;
             lblSlog.Size = new Size(240, 20);
@@ -2280,7 +2298,7 @@ namespace Traynexus
 
             var lblVer = new Label();
             lblVer.Text = "v1.0717.3";
-            lblVer.Font = new Font(Fnt, 8f);
+            lblVer.Font = Fonts.S8;
             lblVer.ForeColor = CInk2;
             lblVer.AutoSize = false;
             lblVer.TextAlign = ContentAlignment.MiddleRight;
@@ -2302,7 +2320,7 @@ namespace Traynexus
             // 简介
             var lblDesc = new Label();
             lblDesc.Text = "常驻托盘轻量级资源管家，整合内存释放 / 电池健康管理 / 多显示器亮度控制。";
-            lblDesc.Font = new Font(Fnt, 8.5f);
+            lblDesc.Font = Fonts.S85;
             lblDesc.ForeColor = CInk2;
             lblDesc.AutoSize = false;
             lblDesc.Size = new Size(host.Width, 20);
@@ -2325,19 +2343,19 @@ namespace Traynexus
 
             // —— 信息组 2：问题反馈 / GitHub —— 组内小间隙 4px
             y = AddInfoRowWithLink(p, y, "问题反馈", "GitHub Issues", "提交",
-                () => { try { System.Diagnostics.Process.Start("https://github.com/traynexus/traynexus/issues"); } catch { } });
+                () => { try { System.Diagnostics.Process.Start("https://github.com/576581737-hub/traynexus/issues"); } catch { } });
             y += 4;
             // GitHub 行：内嵌 github_icon.png（黑版）。加载失败时兜底到通用 Flash 图标（几乎不会走到）。
             var ghIcon = MakeIconControl(LogoLoader.GetGithubBitmap(false), NavIcon.Flash, CInk, Color.Transparent);
-            y = AddInfoRowWithIconAndLink(p, y, ghIcon, "GitHub", "github.com/traynexus/traynexus", "打开",
-                () => { try { System.Diagnostics.Process.Start("https://github.com/traynexus/traynexus"); } catch { } });
+            y = AddInfoRowWithIconAndLink(p, y, ghIcon, "GitHub", "github.com/576581737-hub/traynexus", "打开",
+                () => { try { System.Diagnostics.Process.Start("https://github.com/576581737-hub/traynexus"); } catch { } });
 
             // 版权：贴 subContainer 底部（Anchor=Bottom）—— 关于独占时 subContainer 会撑高，
             // 中间的信息组自然向下铺开填充空白；版权与末行之间由 topMargin(=12) 制造段落层级。
             // 版权 Y = host.Height - 34（比字号本身多 10px 顶部呼吸空间），Height=34。
             var lblCr = new Label();
             lblCr.Text = "© 2026 Aiyow · Made with ⚡ on Windows.";
-            lblCr.Font = new Font(Fnt, 8f);
+            lblCr.Font = Fonts.S8;
             lblCr.ForeColor = CInk2;
             lblCr.TextAlign = ContentAlignment.MiddleCenter;
             lblCr.AutoSize = false;
@@ -2354,7 +2372,7 @@ namespace Traynexus
             var t = new TagLabel();
             t.Text = text;
             t.Accent = accent;
-            t.Font = new Font(Fnt, 8f, FontStyle.Bold);
+            t.Font = Fonts.S8B;
             t.Size = new Size(84, 22);
             t.Location = new Point(x, 2);
             parent.Controls.Add(t);
@@ -2377,7 +2395,7 @@ namespace Traynexus
 
             var lblT = new Label();
             lblT.Text = title;
-            lblT.Font = new Font(Fnt, 9.5f);
+            lblT.Font = Fonts.S95;
             lblT.ForeColor = CInk;
             lblT.AutoSize = false;
             lblT.Size = new Size(320, 22);
@@ -2387,7 +2405,7 @@ namespace Traynexus
 
             var lblD = new Label();
             lblD.Text = desc;
-            lblD.Font = new Font(Fnt, 8f);
+            lblD.Font = Fonts.S8;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
             lblD.Size = new Size(320, 22);
@@ -2421,7 +2439,7 @@ namespace Traynexus
 
             var lblT = new Label();
             lblT.Text = title;
-            lblT.Font = new Font(Fnt, 9.5f);
+            lblT.Font = Fonts.S95;
             lblT.ForeColor = CInk;
             lblT.AutoSize = false;
             lblT.Size = new Size(320, 22);
@@ -2431,7 +2449,7 @@ namespace Traynexus
 
             var lblD = new Label();
             lblD.Text = desc;
-            lblD.Font = new Font(Fnt, 8f);
+            lblD.Font = Fonts.S8;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
             lblD.Size = new Size(320, 22);
@@ -2441,7 +2459,7 @@ namespace Traynexus
 
             var link = new SoftLinkButton();
             link.Text = linkText;
-            link.Font = new Font(Fnt, 9f, FontStyle.Bold);
+            link.Font = Fonts.S9B;
             link.Size = new Size(72, 28);
             link.Location = new Point(row.Width - 72, 12);
             link.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -2466,7 +2484,7 @@ namespace Traynexus
 
             var lblT = new Label();
             lblT.Text = title;
-            lblT.Font = new Font(Fnt, 9.5f);
+            lblT.Font = Fonts.S95;
             lblT.ForeColor = CInk;
             lblT.AutoSize = false;
             lblT.Size = new Size(320, 22);
@@ -2476,7 +2494,7 @@ namespace Traynexus
 
             var lblD = new Label();
             lblD.Text = desc;
-            lblD.Font = new Font(Fnt, 8f);
+            lblD.Font = Fonts.S8;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
             lblD.Size = new Size(320, 22);
@@ -2488,7 +2506,7 @@ namespace Traynexus
             cb.DropDownStyle = ComboBoxStyle.DropDownList;
             cb.Items.AddRange(options);
             cb.SelectedIndex = Math.Max(0, Math.Min(options.Length - 1, init));
-            cb.Font = new Font(Fnt, 9.5f);
+            cb.Font = Fonts.S95;
             cb.Size = new Size(140, 26);
             cb.Location = new Point(row.Width - 140, 13);
             cb.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -2512,7 +2530,7 @@ namespace Traynexus
             };
             var lblT = new Label();
             lblT.Text = title;
-            lblT.Font = new Font(Fnt, 9f);
+            lblT.Font = Fonts.S9;
             lblT.ForeColor = CInk;
             lblT.AutoSize = false;
             lblT.Size = new Size(300, 22);
@@ -2521,7 +2539,7 @@ namespace Traynexus
             row.Controls.Add(lblT);
             var lblD = new Label();
             lblD.Text = desc;
-            lblD.Font = new Font(Fnt, 8f);
+            lblD.Font = Fonts.S8;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
             lblD.Size = new Size(500, 22);
@@ -2537,7 +2555,7 @@ namespace Traynexus
             int newY = AddInfoRow(parent, y, title, desc);
             var link = new SoftLinkButton();
             link.Text = linkText;
-            link.Font = new Font(Fnt, 9f, FontStyle.Bold);
+            link.Font = Fonts.S9B;
             link.Size = new Size(60, 24);
             // 行高 56，link 高 24，垂直居中：(56-24)/2 = 16
             link.Location = new Point(parent.Width - 60, y + 16);
@@ -2571,7 +2589,7 @@ namespace Traynexus
 
             var lblT = new Label();
             lblT.Text = title;
-            lblT.Font = new Font(Fnt, 9f);
+            lblT.Font = Fonts.S9;
             lblT.ForeColor = CInk;
             lblT.AutoSize = false;
             lblT.Size = new Size(240, 22);
@@ -2581,7 +2599,7 @@ namespace Traynexus
 
             var lblD = new Label();
             lblD.Text = desc;
-            lblD.Font = new Font(Fnt, 8f);
+            lblD.Font = Fonts.S8;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
             lblD.Size = new Size(400, 22);
@@ -2591,7 +2609,7 @@ namespace Traynexus
 
             var link = new SoftLinkButton();
             link.Text = linkText;
-            link.Font = new Font(Fnt, 9f, FontStyle.Bold);
+            link.Font = Fonts.S9B;
             link.Size = new Size(60, 24);
             link.Location = new Point(row.Width - 60, 16);
             link.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -2610,7 +2628,7 @@ namespace Traynexus
             row.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             var lbl = new Label();
             lbl.Text = title;
-            lbl.Font = new Font(Fnt, 9f);
+            lbl.Font = Fonts.S9;
             lbl.ForeColor = CInk;
             lbl.AutoSize = true;
             lbl.Location = new Point(0, 6);
@@ -2668,7 +2686,7 @@ namespace Traynexus
                 this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
                 this.SetStyle(ControlStyles.Selectable, false);
                 this.TabStop = false;
-                this.Font = new Font(Fnt, 10f);
+                this.Font = Fonts.S10;
                 this.Cursor = Cursors.Hand;
                 this.BackColor = CPanel2;
                 this.Margin = new Padding(0);
@@ -2880,7 +2898,7 @@ namespace Traynexus
 
                 var lbl = new Label();
                 lbl.Text = title;
-                lbl.Font = new Font(Fnt, 11f, FontStyle.Bold);
+                lbl.Font = Fonts.S11B;
                 lbl.ForeColor = CInk;
                 lbl.AutoSize = false;
                 lbl.Size = new Size(300, 46);
@@ -2895,7 +2913,7 @@ namespace Traynexus
                 _summaryTag = new TagLabel();
                 _summaryTag.Text = "";
                 _summaryTag.Accent = CInk3;
-                _summaryTag.Font = new Font(Fnt, 8f, FontStyle.Bold);
+                _summaryTag.Font = Fonts.S8B;
                 _summaryTag.Size = new Size(90, 22);
                 _summaryTag.Anchor = AnchorStyles.Top | AnchorStyles.Right;
                 _summaryTag.Location = new Point(_header.Width - 90 - 40, 12);
@@ -2906,7 +2924,7 @@ namespace Traynexus
                 // 标签背景右边界(卡片坐标)=12+(W-24)-41=W-53，卡片右侧描边=W-1，间距52px，居中=W-27，转_header坐标=W-25
                 _arrow = new Label();
                 _arrow.Text = "▶";
-                _arrow.Font = new Font(Fnt, 11f);
+                _arrow.Font = Fonts.S11;
                 _arrow.ForeColor = CInk2;
                 _arrow.AutoSize = false;
                 _arrow.Size = new Size(20, 46);
@@ -3239,26 +3257,47 @@ namespace Traynexus
                 using (var brInner = new SolidBrush(bg))
                     g.FillPath(brInner, pathInner);
 
-                // === 内容排布（顶 12、底 12）===
-                //   Icon: y=12..38, 名称: y=14..38 (与图标视觉居中)
-                //   大数字: y=42..76
-                //   描述贴底: y = Height - 12 - 16 = Height - 28
-                var icoR = new Rectangle(12, 12, 26, 26);
+                // === 内容排布：图标行 / 大数字 / 描述 三段垂直堆叠 ===
+                //   卡片高 108（LayoutModes 写死），顶/底边距对称 pad
+                //   图标行 h1=26，描述行 h3=16（视觉高度稳定，硬编码）
+                //   大数字 h2 用 GDI+ MeasureString 测实际字形 bounding box（比 TextRenderer.MeasureText 准）
                 Color accentColor = _dimmed ? CInk3 : _accent;
                 Color nameColor   = _dimmed ? CInk3 : CInk;
                 Color descColor   = _dimmed ? CInk3 : CInk2;
+
+                // GDI+ 测量大数字实际渲染高度（用 Typographic 标志，返回字形精确边界）
+                var pctSize = g.MeasureString(_mp, Fonts.S14B, new PointF(0, 0), StringFormat.GenericTypographic);
+
+                int padTop = 10;                                  // 顶部边距
+                int padBottom = 14;                               // 底部边距（大一点，避免描述行贴底）
+                int h1  = 26;                                     // 图标行高（图 26x26）
+                int h2  = (int)Math.Ceiling(pctSize.Height);      // 大数字实际高
+                int h3  = 16;                                     // 描述行高（8pt 实际约 15-16）
+                int gapTotal = Height - padTop - padBottom - h1 - h2 - h3;
+                int gap  = Math.Max(2, gapTotal / 3);             // 三段间距缩小（/3 而非 /2）
+
+                int y1 = padTop;                                  // 图标行顶
+                int y2 = y1 + h1 + gap;                           // 大数字行顶
+                int y3 = y2 + h2 + gap;                           // 描述行顶
+
+                // 图标（垂直居中于图标行）
+                int icoH = 26;
+                int icoY = y1 + (h1 - icoH) / 2;
+                var icoR = new Rectangle(14, icoY, icoH, icoH);
                 using (var path = RoundedRect(icoR, 7))
                 using (var brIco = new SolidBrush(_dimmed ? Color.FromArgb(235, 235, 238) : _icoBg))
                     g.FillPath(brIco, path);
                 DrawIcon(g, _icon, new Rectangle(icoR.X + 5, icoR.Y + 5, icoR.Width - 10, icoR.Height - 10), accentColor);
-                using (var fName = new Font(Fnt, 10f, FontStyle.Bold))
-                    TextRenderer.DrawText(g, _mn, fName, new Point(46, 14), nameColor, TextFormatFlags.NoPadding);
+                // 名称（垂直居中于图标行；用 MeasureString 测实际高度）
+                var nameSize = g.MeasureString(_mn, Fonts.S10B, new PointF(0, 0), StringFormat.GenericTypographic);
+                int nameY = y1 + (h1 - (int)Math.Ceiling(nameSize.Height)) / 2;
+                TextRenderer.DrawText(g, _mn, Fonts.S10B, new Point(48, nameY), nameColor, TextFormatFlags.NoPadding);
 
-                using (var fBig = new Font(Fnt, 14f, FontStyle.Bold))
-                    TextRenderer.DrawText(g, _mp, fBig, new Point(12, 44), accentColor, TextFormatFlags.NoPadding);
+                // 大数字
+                TextRenderer.DrawText(g, _mp, Fonts.S14B, new Point(14, y2), accentColor, TextFormatFlags.NoPadding);
 
-                using (var fDesc = new Font(Fnt, 8f))
-                    TextRenderer.DrawText(g, _md, fDesc, new Point(12, Height - 26), descColor, TextFormatFlags.NoPadding);
+                // 描述
+                TextRenderer.DrawText(g, _md, Fonts.S8, new Point(14, y3), descColor, TextFormatFlags.NoPadding);
 
                 // 选中勾
                 if (_selected)
@@ -3302,8 +3341,7 @@ namespace Traynexus
                     g.DrawEllipse(pen, r);
                 using (var pen = new Pen(RingColor, 4f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
                     g.DrawArc(pen, r, -90, 360f * Percent / 100f);
-                using (var fPct = new Font(Fnt, 10f, FontStyle.Bold))
-                    TextRenderer.DrawText(g, Percent + "%", fPct, this.ClientRectangle, CInk,
+                TextRenderer.DrawText(g, Percent + "%", Fonts.S10B, this.ClientRectangle, CInk,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
             }
         }
@@ -3422,9 +3460,8 @@ namespace Traynexus
             public TagLabel()
             {
                 this.DoubleBuffered = true;
-                // 不设 SupportsTransparentBackColor -- 避免透明路径导致下层文字透出
                 this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
-                this.BackColor = Color.FromArgb(245, 246, 249);   // 卡片底色
+                this.BackColor = Color.FromArgb(245, 246, 249);
             }
             protected override void OnPaint(PaintEventArgs e)
             {
@@ -3434,12 +3471,13 @@ namespace Traynexus
                 // 先填背景（卡片底色，不透明）
                 using (var brBg = new SolidBrush(this.BackColor))
                     g.FillRectangle(brBg, this.ClientRectangle);
-                // 画圆角药丸
+                // 画圆角药丸（纯色填充，不用 Alpha 混合 -- 避免和底色融合看不清）
                 var rr = new Rectangle(0, 0, Width - 1, Height - 1);
                 using (var path = RoundedRect(rr, Height / 2))
-                using (var br = new SolidBrush(Color.FromArgb(45, Accent.R, Accent.G, Accent.B)))
+                using (var br = new SolidBrush(Color.FromArgb(230, Accent.R, Accent.G, Accent.B)))
                     g.FillPath(br, path);
-                TextRenderer.DrawText(g, this.Text, this.Font, this.ClientRectangle, Accent,
+                // 文字用白色（在彩色药丸上对比度高）
+                TextRenderer.DrawText(g, this.Text, this.Font, this.ClientRectangle, Color.White,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
             }
         }

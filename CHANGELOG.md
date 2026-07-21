@@ -4,6 +4,29 @@
 
 ---
 
+## v1.0720.4 - 2026-07-20（Font 静态共享 + GitHub 开源链接）
+
+### P1 资源泄漏修复（审计 P1-1）
+- **新增 `Fonts` 静态类**（`src\Traynexus\Fonts.cs`）：集中持有 15 档共享 Font 实例（8f~22f，Regular/Bold）
+- **MainForm.cs 74 处 `new Font(...)` 全部替换为 `Fonts.XX` 引用**：消除 GDI+ 句柄缓慢上涨
+  - 原本 `new Font()` 挂在控件属性上，WinForms 控件 Dispose 不会自动释放 Font
+  - 改为静态共享后整进程只 new 一次，进程退出由 OS 回收
+- **QuickForm.cs 4 处 Paint 内 Font 纳入共享**：`fontTitle/fontPct/fontDetail/fontBtn` 改引用 Fonts，去掉 finally 里的 Dispose
+- **修复 OnPaint 内 `using (var x = Fonts.XX)` 陷阱**：4 处原 `using` 包裹的 Font 改为直接传参，避免对共享实例误调 Dispose 导致后续 ObjectDisposedException
+
+### 工程优化
+- **GitHub 链接改为真实开源地址**：关于页「问题反馈」「GitHub」两处链接从占位 `github.com/traynexus/traynexus` 改为 `github.com/576581737-hub/traynexus`
+- **构建脚本同步**：`build.bat` / `build_debug.bat` / `build.rsp` 均追加 `src\Traynexus\Fonts.cs`
+
+### 产物
+- `bin/Traynexus.exe`（300544 字节，0 error 0 warning）
+
+### 未修复（留下个迭代）
+- **P1（外部报告 #7）**：ASUS `QueryAsusLimit` 真正实现，需真实 ASUS 硬件验证 DSTS 返回值位解析
+- **P3-1**：MainForm.cs 拆文件（当前 3294 行 -> Controls/ + Pages/），纯工程优化不影响运行时
+
+---
+
 ## v1.0720.3 - 2026-07-20（代码审计修复第二批：性能优化 + 资源泄漏 + 健壮性）
 
 ### P1 性能优化

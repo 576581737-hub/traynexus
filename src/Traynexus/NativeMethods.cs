@@ -222,5 +222,68 @@ namespace Traynexus
             uint nOutBufferSize,
             out uint lpBytesReturned,
             IntPtr lpOverlapped);
+
+        // ==== DDC/CI 物理显示器亮度（dxva2.dll + user32.dll）====
+        // 用于外接显示器亮度控制，WMI 只支持内置屏。
+
+        // PHYSICAL_MONITOR 结构体
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct PHYSICAL_MONITOR
+        {
+            public IntPtr hPhysicalMonitor;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string szPhysicalMonitorDescription;
+        }
+
+        // MonitorEnumProc 委托（EnumDisplayMonitors 回调）
+        public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor,
+            ref RECT lprcMonitor, IntPtr dwData);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int left, top, right, bottom;
+        }
+
+        // MC_CAPABILITIES 常量
+        public const uint MC_CAPS_BRIGHTNESS = 0x00000002;
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool EnumDisplayMonitors(
+            IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
+
+        [DllImport("dxva2.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetNumberOfPhysicalMonitorsFromHMONITOR(
+            IntPtr hMonitor, out uint pdwNumberOfPhysicalMonitors);
+
+        [DllImport("dxva2.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetPhysicalMonitorsFromHMONITOR(
+            IntPtr hMonitor, uint dwPhysicalMonitorArraySize,
+            [Out] PHYSICAL_MONITOR[] pPhysicalMonitorArray);
+
+        [DllImport("dxva2.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool DestroyPhysicalMonitors(
+            uint dwPhysicalMonitorArraySize, [In] PHYSICAL_MONITOR[] pPhysicalMonitorArray);
+
+        [DllImport("dxva2.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetMonitorCapabilities(
+            IntPtr hMonitor, out uint pdwMonitorCapabilities,
+            out uint pdwSupportedColorTemperatures);
+
+        [DllImport("dxva2.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetMonitorBrightness(
+            IntPtr hMonitor, out uint pdwMinimumBrightness,
+            out uint pdwCurrentBrightness, out uint pdwMaximumBrightness);
+
+        [DllImport("dxva2.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetMonitorBrightness(
+            IntPtr hMonitor, uint dwNewBrightness);
     }
 }

@@ -27,6 +27,7 @@ src\Traynexus\Settings.cs
 src\Traynexus\ConfigMigrator.cs
 src\Traynexus\AutoStartManager.cs
 src\Traynexus\MainForm.cs
+src\Traynexus\Fonts.cs
 src\Traynexus\QuickForm.cs
 src\Traynexus\BatteryInfo.cs
 src\Traynexus\OemChargeController.cs

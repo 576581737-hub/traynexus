@@ -72,7 +72,6 @@ namespace Traynexus
         // 计划任务
         public bool NightCareEnabled = false;    // 夜间自动保养 22:00-07:00 降至 60%
         public bool WeekendFullCharge = false;   // 周末满充准备
-        public bool MeetingDndMode = false;      // 会议免扰模式
 
         public string ConfigDir;
         public string WhitelistPath;
@@ -291,8 +290,6 @@ namespace Traynexus
                             s.NightCareEnabled = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
                         else if (k.Equals("WeekendFullCharge", StringComparison.OrdinalIgnoreCase))
                             s.WeekendFullCharge = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
-                        else if (k.Equals("MeetingDndMode", StringComparison.OrdinalIgnoreCase))
-                            s.MeetingDndMode = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
                     }
                 }
                 catch (Exception ex) { Log("Settings.Load 解析失败: " + ex.Message); }
@@ -346,7 +343,6 @@ namespace Traynexus
             sb.AppendLine("AutoBrightness=" + (AutoBrightness ? "1" : "0"));
             sb.AppendLine("NightCareEnabled=" + (NightCareEnabled ? "1" : "0"));
             sb.AppendLine("WeekendFullCharge=" + (WeekendFullCharge ? "1" : "0"));
-            sb.AppendLine("MeetingDndMode=" + (MeetingDndMode ? "1" : "0"));
 
             string tmp = SettingsPath + ".tmp";
             try

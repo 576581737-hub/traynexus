@@ -367,10 +367,11 @@ namespace Traynexus
             int barW = w - pad * 2;
             int y = pad;
 
-            var fontTitle = new Font("Microsoft YaHei UI", 10f, FontStyle.Bold);
-            var fontPct = new Font("Microsoft YaHei UI", 11f, FontStyle.Bold);
-            var fontDetail = new Font("Microsoft YaHei UI", 8f);
-            var fontBtn = new Font("Microsoft YaHei UI", 10f, FontStyle.Bold);
+            // 复用全局共享 Font（Fonts 静态类），避免每次 Paint 都 new 4 个 Font
+            var fontTitle = Fonts.S10B;
+            var fontPct = Fonts.S11B;
+            var fontDetail = Fonts.S8;
+            var fontBtn = Fonts.S10B;
 
             Color memColor = Color.FromArgb(52, 199, 89);
             Color battColor = Color.FromArgb(10, 122, 255);
@@ -421,10 +422,7 @@ namespace Traynexus
             }
             finally
             {
-                fontTitle.Dispose();
-                fontPct.Dispose();
-                fontDetail.Dispose();
-                fontBtn.Dispose();
+                // 共享 Font 不 Dispose，由进程退出回收
             }
         }
 
