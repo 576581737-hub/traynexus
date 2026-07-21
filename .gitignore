@@ -53,3 +53,12 @@ _attic/
 deliverables/
 # 本地构建日志（.txt 不在上面的 *.log 规则内）
 build_log.txt
+
+# ---------- 已清理：本地保留但不再入库 ----------
+# 早期 WebView2/Tauri UI 原型（纯 WinForms 已无 WebView 依赖，构建/代码均不引用）
+src/ui/
+# 内部审计 / 规划文档（非产品文档）
+docs/code-audit-2026-07-20.md
+docs/implementation-gap.md
+# 未嵌入构建的备用品牌资源
+logo_512.png
