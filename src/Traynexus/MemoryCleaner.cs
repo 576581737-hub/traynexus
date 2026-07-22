@@ -200,7 +200,7 @@ namespace Traynexus
                         NativeMethods.PROCESS_SET_QUOTA | NativeMethods.PROCESS_QUERY_LIMITED_INFORMATION,
                         false, (uint)p.Id);
                 }
-                catch { r.FailedByAccess++; try { p.Dispose(); } catch { } continue; }
+                catch (Exception ex) { Settings.Log("MemoryCleaner.OpenProcess 失败: " + ex.Message); r.FailedByAccess++; try { p.Dispose(); } catch { } continue; }
 
                 if (h == IntPtr.Zero)
                 {

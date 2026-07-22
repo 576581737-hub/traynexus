@@ -48,7 +48,12 @@ namespace Traynexus
             }
             finally
             {
-                try { _mutex.ReleaseMutex(); } catch { }
+                // 仅当确实获得 mutex 所有权时才 ReleaseMutex；未获所有权（owned=false）时
+                // ReleaseMutex 会抛 ApplicationException，原代码靠空 catch 掩盖逻辑错误。
+                if (owned)
+                {
+                    try { _mutex.ReleaseMutex(); } catch (Exception ex) { Settings.Log("ReleaseMutex 失败: " + ex.Message); }
+                }
                 try { _mutex.Dispose(); } catch { }
             }
         }

@@ -15,7 +15,7 @@
 ![.NET](https://img.shields.io/badge/.NET-Framework%204.x-512BD4)
 ![Language](https://img.shields.io/github/languages/top/576581737-hub/traynexus)
 ![Build](https://github.com/576581737-hub/traynexus/actions/workflows/build.yml/badge.svg)
-![Version](https://img.shields.io/badge/version-v1.0721.0-blue)
+![Version](https://img.shields.io/badge/version-v1.0722.1-blue)
 ![Size](https://img.shields.io/badge/size-~300%20KB-green)
 
 ---
@@ -176,7 +176,7 @@ Traynexus/
 ### 设置
 - **通用**：开机自启（schtasks）
 - **内存**：释放方式 / 阈值触发 / 白名单编辑 / 配置文件夹
-- **计划**：夜间保养 / 周末满充（定时执行已接入，会议免扰规划中）
+- **计划**：夜间保养 / 周末满充（定时执行已接入）
 
 ### 计划任务
 - **夜间保养**：到设定时段自动切到保养模式（60%），离开时段恢复

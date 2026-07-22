@@ -32,3 +32,5 @@ src\Traynexus\QuickForm.cs
 src\Traynexus\BatteryInfo.cs
 src\Traynexus\OemChargeController.cs
 src\Traynexus\BrightnessController.cs
+src\Traynexus\UpdateChecker.cs
+src\Traynexus\LightSensorReader.cs

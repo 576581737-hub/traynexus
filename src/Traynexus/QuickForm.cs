@@ -153,9 +153,11 @@ namespace Traynexus
                 _memPercent = Math.Min(100, mem.UsedPercent);
                 _memDetail = MemorySnapshot.FormatBytes(mem.UsedBytes) + " / " + MemorySnapshot.FormatBytes(mem.TotalBytes);
 
-                var batt = BatteryInfo.Take();
-                _battPresent = batt.IsPresent;
-                if (batt.IsPresent)
+                // 电池改读 TrayContext 后台线程采集的缓存快照，避免 UI 线程同步触发 BatteryInfo.Take()
+                // （首次可能拉起 powercfg.exe，5s 超时会卡死速览面板）
+                var batt = _context != null ? _context.CurrentBattery : null;
+                _battPresent = batt != null && batt.IsPresent;
+                if (_battPresent)
                 {
                     _battPercent = Math.Min(100, batt.Percent);
                     _battDetail = batt.IsCharging ? "充电中" : "使用中";
@@ -166,7 +168,7 @@ namespace Traynexus
                     _battDetail = "无电池";
                 }
             }
-            catch { }
+            catch (Exception ex) { Settings.Log("QuickForm.RefreshData 失败: " + ex.Message); }
             if (this.Visible) RedrawLayered();
         }
 

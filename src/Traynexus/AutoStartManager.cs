@@ -34,7 +34,7 @@ namespace Traynexus
                     return p.ExitCode == 0;
                 }
             }
-            catch { return false; }
+            catch (Exception ex) { Settings.Log("AutoStartManager.IsEnabled 失败: " + ex.Message); return false; }
         }
 
         /// <summary>
@@ -45,6 +45,9 @@ namespace Traynexus
             try
             {
                 string exePath = Application.ExecutablePath;
+                // 防御性校验：Windows 路径不会含双引号，若含则拒绝创建任务，避免破坏 schtasks 命令行转义。
+                // 正常路径经 /TR "\"<path>\"" 转义后，schtasks 实际收到 /TR "C:\...\Traynexus.exe"。
+                if (exePath == null || exePath.IndexOf('"') >= 0) return false;
                 string trArgs = "/Create /TN \"" + TaskName + "\" /TR \"\\\"" + exePath + "\\\"\" /SC ONLOGON /RL HIGHEST /F";
                 var psi = new ProcessStartInfo("schtasks.exe", trArgs)
                 {
@@ -58,7 +61,7 @@ namespace Traynexus
                     return p.ExitCode == 0;
                 }
             }
-            catch { return false; }
+            catch (Exception ex) { Settings.Log("AutoStartManager.Enable 失败: " + ex.Message); return false; }
         }
 
         /// <summary>
@@ -83,7 +86,7 @@ namespace Traynexus
                     return p.ExitCode == 0;
                 }
             }
-            catch { return false; }
+            catch (Exception ex) { Settings.Log("AutoStartManager.Disable 失败: " + ex.Message); return false; }
         }
 
         /// <summary>
@@ -116,7 +119,7 @@ namespace Traynexus
                 };
                 using (var p = Process.Start(del)) { p.WaitForExit(5000); }
             }
-            catch { /* 清理失败不影响启动 */ }
+            catch (Exception ex) { Settings.Log("AutoStartManager.CleanupOldTask 失败（不影响启动）: " + ex.Message); }
         }
     }
 }

@@ -40,6 +40,11 @@ namespace Traynexus
         private bool _nightCareActive;       // 夜间保养当前是否激活
         private bool _weekendChargeActive;   // 周末满充当前是否激活
 
+        // 自动亮度定时器（10s 采样环境光，无传感器时不启动）
+        private System.Windows.Forms.Timer _autoBrightTimer;
+        private int _lastAutoBrightness = -1;  // 上次设置的亮度，避免频繁调 WMI
+        private volatile bool _autoBrightSampling;
+
         // 迁移通知
         private string _pendingMigrationNotice;
         private string _pendingConflictNotice;
@@ -49,7 +54,7 @@ namespace Traynexus
             UiMarshal.Init();
 
             try { AutoStartManager.CleanupOldTask(); }
-            catch { }
+            catch (Exception ex) { Settings.Log("TrayContext.CleanupOldTask 失败: " + ex.Message); }
 
             try
             {
@@ -77,6 +82,15 @@ namespace Traynexus
             {
                 if (e.Button == MouseButtons.Left) ToggleQuickPanel();
             };
+            _tray.BalloonTipClicked += (s, e) =>
+            {
+                // 点击更新气泡 -> 打开 Release 下载页
+                if (!string.IsNullOrEmpty(_pendingUpdateUrl))
+                {
+                    try { System.Diagnostics.Process.Start(_pendingUpdateUrl); } catch { }
+                    _pendingUpdateUrl = null;
+                }
+            };
 
             ShowPendingNotices();
 
@@ -101,7 +115,100 @@ namespace Traynexus
             _scheduleTimer.Tick += (s, e) => CheckSchedule();
             _scheduleTimer.Start();
             CheckSchedule();   // 启动时立即检查一次
+
+            // 启动后延时检查更新（后台线程，24h 节流）
+            StartUpdateCheck();
+
+            // 自动亮度定时器（10s 采样环境光；无传感器时不启动，UI 会灰色不可用）
+            _autoBrightTimer = new System.Windows.Forms.Timer();
+            _autoBrightTimer.Interval = 10000;
+            _autoBrightTimer.Tick += (s, e) => AutoBrightnessTick();
+            _autoBrightTimer.Start();
         }
+
+        // ============================================================
+        // 自动亮度（环境光传感器 -> 亮度调节）
+        // ============================================================
+        private void AutoBrightnessTick()
+        {
+            // 用户关闭了自动亮度则跳过
+            if (!_settings.AutoBrightness) return;
+            // 防重入：上次采样还没完（PowerShell 子进程可能 1-2s）
+            if (_autoBrightSampling) return;
+            _autoBrightSampling = true;
+
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    // 传感器不可用则不动作（UI 已灰色不可用）
+                    if (!LightSensorReader.IsAvailable()) return;
+
+                    float? lux = LightSensorReader.GetLux();
+                    if (!lux.HasValue) return;   // 读取失败，静默跳过
+
+                    int target = LightSensorReader.LuxToBrightness(lux.Value);
+                    // 变化超过 5% 才实际调节，避免频繁 WMI SetBrightness
+                    if (Math.Abs(target - _lastAutoBrightness) < 5) return;
+
+                    bool ok = BrightnessController.SetBrightness(target);
+                    if (ok) _lastAutoBrightness = target;
+                }
+                catch (Exception ex) { Settings.Log("AutoBrightnessTick 失败: " + ex.Message); }
+                finally { _autoBrightSampling = false; }
+            });
+        }
+
+        /// <summary>供 MainForm 开关切换时立即触发一次自动亮度调节。</summary>
+        internal void TriggerAutoBrightness()
+        {
+            AutoBrightnessTick();
+        }
+
+        // ============================================================
+        // 更新检查（启动后延时检查 + 24h 节流）
+        // ============================================================
+        private void StartUpdateCheck()
+        {
+            if (!_settings.UpdateCheckEnabled) return;
+
+            // 24h 节流：上次检查未满 24h 则跳过
+            DateTime lastCheck;
+            if (DateTime.TryParse(_settings.LastUpdateCheck, out lastCheck))
+            {
+                if (DateTime.Now - lastCheck < TimeSpan.FromHours(24)) return;
+            }
+
+            // 后台线程延时 10s 再检查，避免启动时网络请求拖慢 UI 初始化
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                System.Threading.Thread.Sleep(10000);
+                var result = UpdateChecker.Check();
+
+                // 无论结果如何，记录检查时间
+                _settings.LastUpdateCheck = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+                try { _settings.Save(); } catch { }
+
+                if (result.HasUpdate)
+                {
+                    this.PostToUi(() =>
+                    {
+                        try
+                        {
+                            _tray.BalloonTipTitle = "发现新版本 v" + result.LatestVersion;
+                            _tray.BalloonTipText = "点击查看下载页面，当前版本 v" + UpdateChecker.CurrentVersion;
+                            _tray.BalloonTipIcon = ToolTipIcon.Info;
+                            _tray.ShowBalloonTip(8000);
+                            _pendingUpdateUrl = result.ReleaseUrl;
+                        }
+                        catch (Exception ex) { Settings.Log("更新通知失败: " + ex.Message); }
+                    });
+                }
+            });
+        }
+
+        // 更新气泡点击后跳转的 URL（由 BalloonTipClicked 使用）
+        private string _pendingUpdateUrl;
 
         // ============================================================
         // 右键菜单（原生 ContextMenuStrip）
@@ -173,7 +280,7 @@ namespace Traynexus
                 _tray.BalloonTipIcon = ToolTipIcon.Info;
                 _tray.ShowBalloonTip(5000);
             }
-            catch { }
+            catch (Exception ex) { Settings.Log("TrayContext.ShowBalloon 失败: " + ex.Message); }
         }
 
         // ============================================================
@@ -201,7 +308,7 @@ namespace Traynexus
                             chargeMode = " 保养中";
                     }
                 }
-                catch { }
+                catch (Exception ex) { Settings.Log("TrayContext.TickRefresh 充电状态 失败: " + ex.Message); }
                 battText = _battery.Percent + "%" + (_battery.IsCharging ? " 充电中" : "") + chargeMode;
             }
             // 亮度
@@ -211,7 +318,7 @@ namespace Traynexus
                 int bright = BrightnessController.GetBrightness();
                 if (bright >= 0) brightText = " · 亮度 " + bright + "%";
             }
-            catch { }
+            catch (Exception ex) { Settings.Log("TrayContext.TickRefresh 亮度 失败: " + ex.Message); }
             _tray.Text = s.FormatShort() + " · 电量 " + battText + brightText;
 
             if (s.UsedPercent != _lastPercent)
@@ -222,7 +329,7 @@ namespace Traynexus
                     _currentIcon = IconRenderer.Build(s.UsedPercent, _battery.Percent, _battery.IsCharging);
                     _tray.Icon = _currentIcon;
                 }
-                catch { }
+                catch (Exception ex) { Settings.Log("TrayContext.TickRefresh 图标 失败: " + ex.Message); }
             }
 
             // 速览面板可见时刷新
@@ -387,7 +494,7 @@ namespace Traynexus
                     _pendingConflictNotice = null;
                 }
             }
-            catch { }
+            catch (Exception ex) { Settings.Log("TrayContext.ShowPendingNotices 失败: " + ex.Message); }
         }
 
         private void ExitApp()
@@ -408,6 +515,7 @@ namespace Traynexus
                     _timer.Stop(); _timer.Dispose();
                     _batteryTimer.Stop(); _batteryTimer.Dispose();
                     if (_scheduleTimer != null) { _scheduleTimer.Stop(); _scheduleTimer.Dispose(); }
+                    if (_autoBrightTimer != null) { _autoBrightTimer.Stop(); _autoBrightTimer.Dispose(); }
                     _tray.Visible = false;
                     if (_tray.ContextMenuStrip != null) { try { _tray.ContextMenuStrip.Dispose(); } catch { } }
                     _tray.Dispose();

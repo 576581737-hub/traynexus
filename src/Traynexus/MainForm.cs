@@ -71,6 +71,9 @@ namespace Traynexus
         // 亮度页
         private ToggleSwitch _autoBrightSw;
 
+        // 关于页：检查更新按钮（文字动态更新）
+        private SoftLinkButton _updateBtn;
+
         // 设置页子页签（供 NavigateToAbout 使用）
         private SubTabButton[] _setTabBtns;
         private Panel[] _setTabPanels;
@@ -80,6 +83,8 @@ namespace Traynexus
 
         // 定时刷新
         private readonly System.Windows.Forms.Timer _refreshTimer;
+        // 充电滑块防抖定时器（首次 ValueChanged 时懒创建，FormClosed 需释放，避免泄漏）
+        private System.Windows.Forms.Timer _bcDebounce;
 
         public MainForm(Settings settings, TrayContext context)
         {
@@ -104,7 +109,12 @@ namespace Traynexus
             _refreshTimer.Tick += (s, e) => { RefreshTitle(); RefreshOverview(); RefreshChargeStatus(); };
             _refreshTimer.Start();
 
-            this.FormClosed += (s, e) => _refreshTimer.Stop();
+            this.FormClosed += (s, e) =>
+            {
+                _refreshTimer.Stop();
+                _refreshTimer.Dispose();
+                if (_bcDebounce != null) { _bcDebounce.Stop(); _bcDebounce.Dispose(); _bcDebounce = null; }
+            };
 
             // 首次显示后再刷一遍当前页面 —— 避免首次显示时子控件双缓冲区未初始化留下脏像素
             this.Shown += (s, e) =>
@@ -159,7 +169,7 @@ namespace Traynexus
                     int bright = BrightnessController.GetBrightness();
                     if (bright >= 0) brightText = bright + "%";
                 }
-                catch { }
+                catch (Exception ex) { Settings.Log("MainForm.RefreshTitle 亮度 失败: " + ex.Message); }
                 this.Text = string.Format(
                     "TrayNexus  |  内存 {0} / {1} ({2}%)  ·  电量 {3}  ·  亮度 {4}",
                     MemorySnapshot.FormatBytes(mem.UsedBytes),
@@ -168,7 +178,7 @@ namespace Traynexus
                     battText,
                     brightText);
             }
-            catch { }
+            catch (Exception ex) { Settings.Log("MainForm.RefreshTitle 失败: " + ex.Message); }
         }
 
         // ============================================================
@@ -230,7 +240,7 @@ namespace Traynexus
             footer.Padding = new Padding(0);
 
             var lblVer = new Label();
-            lblVer.Text = "Version: v1.0717.3";
+            lblVer.Text = "Version: v1.0722.1";
             lblVer.Dock = DockStyle.Top;
             lblVer.Height = 22;
             lblVer.AutoSize = false;
@@ -582,7 +592,7 @@ namespace Traynexus
                     _ovHealBar.Value = 0;
                 }
             }
-            catch { }
+            catch (Exception ex) { Settings.Log("MainForm.RefreshOverview 失败: " + ex.Message); }
         }
 
         // ============================================================
@@ -729,7 +739,6 @@ namespace Traynexus
             };
 
             // 滑块 debounce：拖动时频繁触发 ValueChanged，等用户停手 500ms 才真正发 IOCTL
-            System.Windows.Forms.Timer bcDebounce = null;
             _bcTrack.ValueChanged += (s, e) =>
             {
                 _bcVal.Text = _bcTrack.Value + "%";
@@ -738,12 +747,12 @@ namespace Traynexus
                 _settings.Save();
 
                 // debounce：重启计时器，500ms 内不再变化才执行
-                if (bcDebounce == null)
+                if (_bcDebounce == null)
                 {
-                    bcDebounce = new System.Windows.Forms.Timer { Interval = 500 };
-                    bcDebounce.Tick += (s2, e2) =>
+                    _bcDebounce = new System.Windows.Forms.Timer { Interval = 500 };
+                    _bcDebounce.Tick += (s2, e2) =>
                     {
-                        bcDebounce.Stop();
+                        _bcDebounce.Stop();
                         int sliderVal = _bcTrack.Value;
                         // 异步设置充电阈值（IOCTL + 回读校验耗时 1-2s，不阻塞 UI）
                         ThreadPool.QueueUserWorkItem(_ =>
@@ -760,8 +769,8 @@ namespace Traynexus
                         });
                     };
                 }
-                bcDebounce.Stop();
-                bcDebounce.Start();
+                _bcDebounce.Stop();
+                _bcDebounce.Start();
             };
             flow.Controls.Add(sliderRow);
 
@@ -1282,23 +1291,29 @@ namespace Traynexus
             autoRow.Margin = new Padding(0, 0, 0, 12);
             autoRow.BackColor = CPanel;
             var lblAutoDesc = new Label();
-            lblAutoDesc.Text = "根据系统环境光自动调节";
+            // 探测环境光传感器：有则显示"根据环境光自动调节"，无则灰色不可用并提示
+            bool hasLightSensor = LightSensorReader.IsAvailable();
+            lblAutoDesc.Text = hasLightSensor ? "根据环境光自动调节" : "未检测到环境光传感器";
             lblAutoDesc.Font = Fonts.S9;
-            lblAutoDesc.ForeColor = CInk;
+            lblAutoDesc.ForeColor = hasLightSensor ? CInk : CInk3;
             lblAutoDesc.AutoSize = false;
-            lblAutoDesc.Size = new Size(240, 32);
+            lblAutoDesc.Size = new Size(280, 32);
             lblAutoDesc.Location = new Point(0, 0);
             lblAutoDesc.TextAlign = ContentAlignment.MiddleLeft;
             autoRow.Controls.Add(lblAutoDesc);
 
             _autoBrightSw = new ToggleSwitch();
-            _autoBrightSw.Checked = _settings.AutoBrightness;
+            _autoBrightSw.Checked = hasLightSensor && _settings.AutoBrightness;
+            _autoBrightSw.Enabled = hasLightSensor;   // 无传感器时灰色不可用
             _autoBrightSw.Size = new Size(46, 26);
             _autoBrightSw.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             _autoBrightSw.CheckedChanged += (s, e) =>
             {
                 _settings.AutoBrightness = _autoBrightSw.Checked;
                 _settings.Save();
+                // 切换为开时立即触发一次自动调节
+                if (_autoBrightSw.Checked && _context != null)
+                    _context.TriggerAutoBrightness();
             };
             autoRow.Controls.Add(_autoBrightSw);
             autoRow.Resize += (s, e) =>
@@ -1797,10 +1812,54 @@ namespace Traynexus
                     "2. 显示器不支持 DDC/CI（老旧显示器）\r\n" +
                     "3. 显示器连接线不支持 DDC（部分 HDMI 转接器）\r\n" +
                     "4. 显卡驱动未启用 DDC/CI 支持",
-                    "外接屏 DDC/CI 说明", MessageBoxButtons.OK, MessageBoxIcon.Information)),
+                    "外接屏 DDC/CI 说明", MessageBoxButtons.OK, MessageBoxIcon.Information)));
+            // 环境光传感器检测：PnP 检测硬件是否存在 + WinRT 能否读取 lux
+            LightSensorReader.InvalidateCache();   // 诊断页重新检测时清除缓存
+            bool hasLightSensorHw = LightSensorReader.IsAvailable();
+            string lightSensorStatusText;
+            DiagStatus lightSensorStatus;
+            if (!hasLightSensorHw)
+            {
+                lightSensorStatus = DiagStatus.Unsupported;
+                lightSensorStatusText = "未检测到";
+            }
+            else
+            {
+                // 硬件存在，再测 WinRT 能否读到 lux
+                float? lux = LightSensorReader.GetLux();
+                if (lux.HasValue)
+                {
+                    lightSensorStatus = DiagStatus.Ready;
+                    lightSensorStatusText = "就绪 · " + lux.Value.ToString("F0") + " lux";
+                }
+                else
+                {
+                    lightSensorStatus = DiagStatus.Warning;
+                    lightSensorStatusText = "硬件已检测，数据不可用";
+                }
+            }
+            y4 = AddDiagnosticRow(card4, y4, "环境光传感器", "自动亮度依赖的环境光传感器",
+                lightSensorStatus, lightSensorStatusText,
+                lightSensorStatus == DiagStatus.Ready ? null : (Action)(() => MessageBox.Show(this,
+                    "自动亮度功能依赖环境光传感器。\r\n\r\n" +
+                    (hasLightSensorHw
+                        ? "已检测到传感器硬件，但当前无法读取环境光数据。\r\n\r\n" +
+                          "可能原因：\r\n" +
+                          "1. 传感器驱动未正确暴露给 Windows WinRT 接口\r\n" +
+                          "2. 传感器为 HID 集合设备，非标准 ALS 类型\r\n" +
+                          "3. 驱动版本过旧\r\n\r\n" +
+                          "解决方法：\r\n" +
+                          "更新主板/芯片组驱动到最新版本，或联系厂商确认传感器 WinRT 兼容性。"
+                        : "当前系统未检测到任何传感器设备。\r\n\r\n" +
+                          "可能原因：\r\n" +
+                          "1. 台式机通常没有环境光传感器\r\n" +
+                          "2. 笔记本传感器被 BIOS 禁用\r\n" +
+                          "3. 传感器驱动未安装\r\n\r\n" +
+                          "无环境光传感器时，自动亮度开关将灰色不可用。"),
+                    "环境光传感器说明", MessageBoxButtons.OK, MessageBoxIcon.Information)),
                 isLast: true);
-            int brightReady = (brightWmi ? 1 : 0) + (ddcOk ? 1 : 0);
-            card4.SetSummary(brightReady + "/2就绪", brightReady == 2 ? CGreen : (brightReady == 1 ? CBlue : CInk3));
+            int brightReady = (brightWmi ? 1 : 0) + (ddcOk ? 1 : 0) + (lightSensorStatus == DiagStatus.Ready ? 1 : 0);
+            card4.SetSummary(brightReady + "/3就绪", brightReady == 3 ? CGreen : (brightReady >= 1 ? CBlue : CInk3));
             flow.Controls.Add(card4);
 
             // 全部卡片添加完后，显式刷新滚动范围
@@ -1885,10 +1944,21 @@ namespace Traynexus
                 }
             };
 
-            // 右侧状态区宽度：标签 80 + 按钮 60 + 间距 8 = 148（有按钮时），无按钮时 80+8=88
-            int rightReserve = (onClick != null) ? 152 : 92;
+            // 右侧状态区宽度：标签宽度(动态) + 按钮 60 + 间距 8（有按钮时），无按钮时 标签宽度+8
+            // 先计算标签实际所需宽度
+            int tagW = 80;   // 默认最小宽度
+            try
+            {
+                using (var g = body.CreateGraphics())
+                {
+                    var sz = g.MeasureString(statusText, Fonts.S8B, 250);
+                    tagW = Math.Max(80, Math.Min(220, (int)Math.Ceiling(sz.Width) + 24));   // +24 padding（圆角+左右留白）
+                }
+            }
+            catch { }
+            int rightReserve = (onClick != null) ? tagW + 76 : tagW + 8;   // 按钮60 + 间距16
 
-            // 标题（第一行，右侧留 rightReserve 给状态标签）
+            // 标题（第一行，右侧留 rightReserve 给状态标签+按钮）
             var lblN = new Label();
             lblN.Text = name;
             lblN.Font = Fonts.S95;
@@ -1897,11 +1967,12 @@ namespace Traynexus
             lblN.Size = new Size(Math.Max(200, row.Width - rightReserve), 22);
             lblN.TextAlign = ContentAlignment.MiddleLeft;
             lblN.Location = new Point(0, 6);
-            lblN.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            // 不用 Anchor=Right -- 避免标题 Label resize 时扩展到右侧覆盖标签和按钮
+            lblN.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             lblN.BackColor = Color.Transparent;
             row.Controls.Add(lblN);
 
-            // 副标题（第二行，右侧留 rightReserve 给状态标签）
+            // 副标题（第二行，右侧留 rightReserve 给状态标签+按钮）
             var lblD = new Label();
             lblD.Text = desc;
             lblD.Font = Fonts.S8;
@@ -1910,12 +1981,20 @@ namespace Traynexus
             lblD.Size = new Size(Math.Max(200, row.Width - rightReserve), descH);
             lblD.TextAlign = ContentAlignment.TopLeft;
             lblD.Location = new Point(0, 32);
-            lblD.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblD.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             lblD.BackColor = Color.Transparent;
             row.Controls.Add(lblD);
 
-            // 状态标签 + 按钮（在标题行右侧，和标题同 Y -- 不和副标题重叠）
-            int statusY = 7;   // 和标题行对齐（标题 Y=6, 标签 Y=7 居中微调）
+            // row resize 时同步更新标题/副标题宽度（因为没用 Anchor=Right 跟随）
+            row.Resize += (s, e) =>
+            {
+                int w = Math.Max(200, row.Width - rightReserve);
+                lblN.Width = w;
+                lblD.Width = w;
+            };
+
+            // 状态标签 + 按钮（在标题行右侧，和标题同 Y）
+            int statusY = 7;
             Color tagColor;
             switch (status)
             {
@@ -1926,28 +2005,49 @@ namespace Traynexus
                 case DiagStatus.Info:         tagColor = CBlue; break;
                 default:                      tagColor = CInk3; break;
             }
-            var tag = new TagLabel();
-            tag.Text = statusText;
-            tag.Accent = tagColor;
-            tag.Font = Fonts.S8B;
-            tag.Size = new Size(80, 22);
-            tag.Location = new Point(row.Width - 80, statusY);
-            tag.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            tag.BackColor = Color.FromArgb(245, 246, 249);
-            row.Controls.Add(tag);
 
-            // 可选操作按钮（在状态标签左侧）
             if (onClick != null)
             {
+                // 有按钮：从右到左 [状态标签 tagW] [10px间距] [查看按钮 60]
+                // 不用 Anchor=Right（初始 row.Width 可能不准导致跨界）
+                // 改用 row.Resize 手动重新定位，且在添加后立即调用一次同步位置
+                var tag = new TagLabel();
+                tag.Text = statusText;
+                tag.Accent = tagColor;
+                tag.Font = Fonts.S8B;
+                tag.Size = new Size(tagW, 22);
+                tag.BackColor = Color.FromArgb(245, 246, 249);
+                row.Controls.Add(tag);
+
                 var link = new SoftLinkButton();
                 link.Text = "查看";
                 link.Font = Fonts.S9B;
                 link.Size = new Size(60, 24);
-                link.Location = new Point(row.Width - 80 - 60 - 8, statusY - 1);
-                link.Anchor = AnchorStyles.Top | AnchorStyles.Right;
                 link.Click += (s, e) => { try { onClick(); } catch (Exception ex) { MessageBox.Show(ex.Message); } };
                 row.Controls.Add(link);
-                tag.BringToFront();
+
+                Action reposition = () =>
+                {
+                    tag.Location = new Point(row.Width - tagW, statusY);
+                    link.Location = new Point(row.Width - tagW - 16 - 60, statusY - 1);
+                };
+                reposition();
+                row.Resize += (s, e) => reposition();
+            }
+            else
+            {
+                // 无按钮：只有状态标签
+                var tag = new TagLabel();
+                tag.Text = statusText;
+                tag.Accent = tagColor;
+                tag.Font = Fonts.S8B;
+                tag.Size = new Size(tagW, 22);
+                tag.BackColor = Color.FromArgb(245, 246, 249);
+                row.Controls.Add(tag);
+
+                Action reposition = () => { tag.Location = new Point(row.Width - tagW, statusY); };
+                reposition();
+                row.Resize += (s, e) => reposition();
             }
 
             body.Controls.Add(row);
@@ -1974,18 +2074,13 @@ namespace Traynexus
                     if (bodyW <= 0) bodyW = c.ClientSize.Width;
                     foreach (Control row in card.Body.Controls)
                     {
+                        // 同步行宽度
                         int rowW = Math.Max(50, bodyW - 32);
                         row.Width = rowW;
-                        // 同步行内标题/副标题 Label 宽度。
-                        // ⚠️ 只能改 Label 类型的子控件：TagLabel(药丸)/SoftLinkButton(按钮)
-                        // 是自绘 Control，位置靠 Anchor.Right + 固定 Size 维持，Width 一旦被覆盖，
-                        // 药丸会横向拉长成"空灰条"、按钮会盖住标题文字（DDC/CI 行 bug 根源）。
-                        // 预留宽度 152 与 AddDiagnosticRow 里"有按钮"的最坏情形一致，避免重叠。
-                        int lblW = Math.Max(200, rowW - 152);
-                        foreach (Control child in row.Controls)
-                        {
-                            if (child is Label) child.Width = lblW;
-                        }
+                        // ⚠️ 不再强制改行内 Label 宽度！
+                        // 每行 AddDiagnosticRow 时已经绑定了 row.Resize 事件，
+                        // 会根据该行动态计算 Label 宽度和按钮位置（预留标签会正确定位，
+                        // 此处二次修改会覆盖正确布局，导致按钮和标签错位（特别是诊断页亮度卡片的按钮被遮挡 bug 根源）。
                     }
                 }
             }
@@ -2259,63 +2354,63 @@ namespace Traynexus
             p.BackColor = CPanel;
             host.Controls.Add(p);
 
-            int y = 8;
+            int y = 16;
 
-            // 品牌区 —— 高度加到 56，主/副标题之间预留 6px 视觉间距，避免 11pt Bold 中文压到副标题上
+            // 品牌区 -- 高度 52，主/副标题之间预留 6px 视觉间距
             var brand = new Panel();
             brand.Location = new Point(0, y);
-            brand.Size = new Size(host.Width, 56);
+            brand.Size = new Size(host.Width, 52);
             brand.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             brand.BackColor = CPanel;
 
-            // 品牌区图标：50×50，Y=2 —— 顶部与主标题顶(Y=2)对齐，底部(Y=52)与副标题底(Y=52)对齐
+            // 品牌区图标：46×46，Y=2
             var appIcon = MakeIconControl(LogoLoader.GetBrandBitmap(), NavIcon.Flash, COrange, CIcoBri);
-            appIcon.Size = new Size(50, 50);
+            appIcon.Size = new Size(46, 46);
             appIcon.Location = new Point(0, 2);
             brand.Controls.Add(appIcon);
 
-            // 主标题：Y=2，Height=24（顶缘 2 与 logo 顶对齐）
+            // 主标题：Y=2，Height=22
             var lblApp = new Label();
             lblApp.Text = "TrayNexus";
             lblApp.Font = Fonts.S11B;
             lblApp.ForeColor = CInk;
             lblApp.AutoSize = false;
-            lblApp.Size = new Size(200, 24);
+            lblApp.Size = new Size(200, 22);
             lblApp.TextAlign = ContentAlignment.MiddleLeft;
-            lblApp.Location = new Point(60, 2);
+            lblApp.Location = new Point(56, 2);
             brand.Controls.Add(lblApp);
 
-            // 副标题：Y=32，Height=20（底缘 52 与 logo 底对齐；主标题底 26 → 6px 段落内空隙）
+            // 副标题：Y=28，Height=18（底缘 46 与 logo 底对齐）
             var lblSlog = new Label();
             lblSlog.Text = "系统资源一体化管家";
             lblSlog.Font = Fonts.S8;
             lblSlog.ForeColor = CInk2;
             lblSlog.AutoSize = false;
-            lblSlog.Size = new Size(240, 20);
+            lblSlog.Size = new Size(240, 18);
             lblSlog.TextAlign = ContentAlignment.MiddleLeft;
-            lblSlog.Location = new Point(60, 32);
+            lblSlog.Location = new Point(56, 28);
             brand.Controls.Add(lblSlog);
 
             var lblVer = new Label();
-            lblVer.Text = "v1.0717.3";
+            lblVer.Text = "v1.0722.1";
             lblVer.Font = Fonts.S8;
             lblVer.ForeColor = CInk2;
             lblVer.AutoSize = false;
             lblVer.TextAlign = ContentAlignment.MiddleRight;
-            lblVer.Size = new Size(110, 20);
-            lblVer.Location = new Point(brand.Width - 110, 18);
+            lblVer.Size = new Size(110, 18);
+            lblVer.Location = new Point(brand.Width - 110, 15);
             lblVer.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             brand.Controls.Add(lblVer);
 
             p.Controls.Add(brand);
-            // 品牌区 -> 内容区：+56（brand 高）+ 24（段落层级空档），让品牌头与下方信息组有明显段落感
-            y += 80;
+            y += 52;
+            y += 16; // 品牌区 -> 内容区段落空隙
 
-            // —— 信息组 1：许可 / 版权 / 联系方式 —— 组内小间隙 4px，组末段落间隙由 desc 前的 +8 提供
-            y = AddInfoRow(p, y, "许可声明", "个人免费授权 · 开源应用"); y += 4;
-            y = AddInfoRow(p, y, "版权所有", "Aiyow"); y += 4;
+            // -- 信息组 1：许可 / 版权 / 联系方式 -- 组内小间隙 2px
+            y = AddInfoRow(p, y, "许可声明", "个人免费授权 · 开源应用"); y += 2;
+            y = AddInfoRow(p, y, "版权所有", "Aiyow"); y += 2;
             y = AddInfoRow(p, y, "联系方式", "E-mail：zzaiyow@agent.qq.com   WeChat：zzAiyow");
-            y += 12; // 段落层级：信息组 → 简介
+            y += 10; // 段落层级：信息组 -> 简介
 
             // 简介
             var lblDesc = new Label();
@@ -2327,41 +2422,86 @@ namespace Traynexus
             lblDesc.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             lblDesc.Location = new Point(0, y);
             p.Controls.Add(lblDesc);
-            y += 30;
+            y += 26;
 
-            // 标签
+            // 标签（底部加分割线，与其他信息行视觉一致）
             var tags = new Panel();
             tags.Location = new Point(0, y);
-            tags.Size = new Size(host.Width, 28);
+            tags.Size = new Size(host.Width, 26);
             tags.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            tags.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(240, 240, 243)))
+                    e.Graphics.DrawLine(pen, 0, tags.Height - 1, tags.Width, tags.Height - 1);
+            };
             AddTag(tags,   0, "内存释放",  COrange);
             AddTag(tags,  92, "电池保养",  CGreen);
             AddTag(tags, 184, "亮度管理",  CBlue);
             p.Controls.Add(tags);
-            y += 44;
-            y += 12; // 段落层级：简介/标签 → 反馈 & 仓库 组
+            y += 26;
+            y += 10; // 段落层级：标签 -> 反馈 & 仓库 组
 
-            // —— 信息组 2：问题反馈 / GitHub —— 组内小间隙 4px
+            // -- 信息组 2：问题反馈 / GitHub / 检查更新 -- 组内小间隙 2px
             y = AddInfoRowWithLink(p, y, "问题反馈", "GitHub Issues", "提交",
                 () => { try { System.Diagnostics.Process.Start("https://github.com/576581737-hub/traynexus/issues"); } catch { } });
-            y += 4;
+            y += 2;
             // GitHub 行：内嵌 github_icon.png（黑版）。加载失败时兜底到通用 Flash 图标（几乎不会走到）。
             var ghIcon = MakeIconControl(LogoLoader.GetGithubBitmap(false), NavIcon.Flash, CInk, Color.Transparent);
             y = AddInfoRowWithIconAndLink(p, y, ghIcon, "GitHub", "github.com/576581737-hub/traynexus", "打开",
                 () => { try { System.Diagnostics.Process.Start("https://github.com/576581737-hub/traynexus"); } catch { } });
+            y += 2;
+            // 检查更新行：手动构建以保存按钮引用（文字随检查状态动态更新）
+            y = AddInfoRow(p, y, "检查更新", "当前版本 v" + UpdateChecker.CurrentVersion);
+            _updateBtn = new SoftLinkButton();
+            _updateBtn.Text = "检查";
+            _updateBtn.Font = Fonts.S9B;
+            _updateBtn.Size = new Size(60, 24);
+            _updateBtn.Location = new Point(p.Width - 60, y - 60 + 16);   // AddInfoRow 返回值=行底+60，行顶=y-60，垂直居中
+            _updateBtn.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _updateBtn.Click += (s, e) =>
+            {
+                if (_updateBtn.Text == "检查中…") return;   // 防重复点击
+                _updateBtn.Text = "检查中…";
+                string currentVer = UpdateChecker.CurrentVersion;
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    var result = UpdateChecker.Check();
+                    this.BeginInvoke(new Action(() =>
+                    {
+                        _updateBtn.Text = "检查";
+                        if (result.HasUpdate)
+                        {
+                            var dr = MessageBox.Show(this,
+                                "发现新版本 v" + result.LatestVersion + "\n当前版本 v" + currentVer +
+                                "\n\n是否前往下载页面？",
+                                "发现新版本", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                            if (dr == DialogResult.Yes)
+                            {
+                                try { System.Diagnostics.Process.Start(result.ReleaseUrl); } catch { }
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show(this, "当前已是最新版本 v" + currentVer + "。",
+                                "检查更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }));
+                });
+            };
+            p.Controls.Add(_updateBtn);
+            _updateBtn.BringToFront();
 
-            // 版权：贴 subContainer 底部（Anchor=Bottom）—— 关于独占时 subContainer 会撑高，
-            // 中间的信息组自然向下铺开填充空白；版权与末行之间由 topMargin(=12) 制造段落层级。
-            // 版权 Y = host.Height - 34（比字号本身多 10px 顶部呼吸空间），Height=34。
+            // 版权：跟随最后内容行，固定底部边距 16px（不再贴绝对底部，避免与内容重叠）
+            y += 16;
             var lblCr = new Label();
             lblCr.Text = "© 2026 Aiyow · Made with ⚡ on Windows.";
             lblCr.Font = Fonts.S8;
             lblCr.ForeColor = CInk2;
             lblCr.TextAlign = ContentAlignment.MiddleCenter;
             lblCr.AutoSize = false;
-            lblCr.Size = new Size(host.Width, 34);
-            lblCr.Location = new Point(0, host.Height - 34);
-            lblCr.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lblCr.Size = new Size(host.Width, 20);
+            lblCr.Location = new Point(0, y);
+            lblCr.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             p.Controls.Add(lblCr);
 
             return p;
@@ -2749,19 +2889,24 @@ namespace Traynexus
                 get { return _checked; }
                 set { if (_checked != value) { _checked = value; Invalidate(); if (CheckedChanged != null) CheckedChanged(this, EventArgs.Empty); } }
             }
-            protected override void OnMouseClick(MouseEventArgs e) { base.OnMouseClick(e); Checked = !Checked; }
+            protected override void OnMouseClick(MouseEventArgs e) { if (Enabled) { base.OnMouseClick(e); Checked = !Checked; } }
             protected override void OnPaintBackground(PaintEventArgs pevent) { }
             protected override void OnPaint(PaintEventArgs e)
             {
                 var g = e.Graphics;
-                // 清父背景 —— 消除 AA 圆角边缘的黑/紫色杂边
+                // 清父背景 -- 消除 AA 圆角边缘的黑/紫色杂边
                 var parentBg = (this.Parent != null ? this.Parent.BackColor : CPanel);
                 using (var brBg = new SolidBrush(parentBg)) g.FillRectangle(brBg, this.ClientRectangle);
 
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
                 var rr = new Rectangle(0, 0, Width - 1, Height - 1);
-                Color track = _checked ? CGreen : Color.FromArgb(233, 233, 234);
+                // 禁用态：灰色轨道，不可操作
+                Color track;
+                if (!Enabled)
+                    track = Color.FromArgb(220, 220, 224);
+                else
+                    track = _checked ? CGreen : Color.FromArgb(233, 233, 234);
                 using (var br = new SolidBrush(track))
                 using (var path = RoundedRect(rr, Height / 2))
                     g.FillPath(br, path);

@@ -145,34 +145,92 @@ namespace Traynexus
             if (percent < 40 || percent > 100) return false;
             var cap = GetCapability();
             if (!cap.Supported) return false;
-            lock (_ioctlLock)
+
+            // ASUS：单次 IOCTL 无 Sleep，持锁时间极短，整体在锁内完成
+            if (cap.Oem == OemVendor.Asus)
             {
-                try
+                lock (_ioctlLock)
                 {
-                    bool ok;
-                    switch (cap.Oem)
+                    try
                     {
-                        case OemVendor.Asus:   ok = SetAsusLimit(percent); break;
-                        case OemVendor.Lenovo: ok = SetLenovoByPercent(percent); break;
-                        default: return false;
+                        bool ok = SetAsusLimit(percent);
+                        if (ok) ClearStatusCache();
+                        return ok;
                     }
-                    // 成功后清状态缓存，让下次 GetStatus 立即读到新值
-                    if (ok)
+                    catch (Exception ex)
                     {
-                        lock (_cacheLock)
-                        {
-                            _cachedStatus = null;
-                            _statusTime = DateTime.MinValue;
-                        }
+                        Settings.Log("OemChargeController.SetChargeLimit(ASUS) 失败: " + ex.Message);
+                        return false;
                     }
-                    return ok;
-                }
-                catch (Exception ex)
-                {
-                    Settings.Log("OemChargeController.SetChargeLimit 失败: " + ex.Message);
-                    return false;
                 }
             }
+
+            // Lenovo：双命令连发（需锁防交叉）+ 回读校验（10×50ms Sleep，移出锁避免阻塞 GetStatus）
+            if (cap.Oem == OemVendor.Lenovo)
+            {
+                uint[] cmds = percent >= 80 ? LENOVO_MODE_NORMAL : LENOVO_MODE_CONSERVATION;
+                int expectedMode = (cmds == LENOVO_MODE_CONSERVATION) ? 0 :
+                                   (cmds == LENOVO_MODE_RAPID) ? 1 : 2;
+
+                // 阶段1：锁内发双命令（含 2×50ms Sleep，约 100ms）
+                bool sent;
+                lock (_ioctlLock)
+                {
+                    try { sent = SendLenovoCommands(cmds); }
+                    catch (Exception ex)
+                    {
+                        Settings.Log("OemChargeController.SetChargeLimit(Lenovo 发命令) 失败: " + ex.Message);
+                        return false;
+                    }
+                }
+                if (!sent) return false;
+
+                // 阶段2：锁外回读校验（最多 10×50ms=500ms），期间 GetStatus 可正常抢锁读状态
+                bool ok = VerifyLenovoMode(expectedMode);
+                if (!ok) Settings.Log("Lenovo SetChargeLimit: 回读不匹配，期望=" + expectedMode);
+                if (ok) ClearStatusCache();
+                return ok;
+            }
+
+            return false;
+        }
+
+        /// <summary>清状态缓存，让下次 GetStatus 立即读到新值。</summary>
+        private static void ClearStatusCache()
+        {
+            lock (_cacheLock)
+            {
+                _cachedStatus = null;
+                _statusTime = DateTime.MinValue;
+            }
+        }
+
+        /// <summary>Lenovo 发双命令（持锁调用）。每条后 sleep 50ms。返回是否两条都成功发出。</summary>
+        private static bool SendLenovoCommands(uint[] cmds)
+        {
+            IntPtr h = OpenDevice(LENOVO_DEVICE);
+            if (h == NativeMethods.INVALID_HANDLE_VALUE) return false;
+            try
+            {
+                foreach (uint cmd in cmds)
+                {
+                    CallLenovoIoctl(h, cmd);
+                    System.Threading.Thread.Sleep(50);
+                }
+                return true;
+            }
+            finally { NativeMethods.CloseHandle(h); }
+        }
+
+        /// <summary>Lenovo 回读校验（锁外调用）。10 次×50ms，匹配 expectedMode 即成功。</summary>
+        private static bool VerifyLenovoMode(int expectedMode)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                if (QueryLenovoMode() == expectedMode) return true;
+                System.Threading.Thread.Sleep(50);
+            }
+            return false;
         }
 
         /// <summary>
@@ -377,38 +435,6 @@ namespace Traynexus
         // 驱动创建 \\.\EnergyDrv 符号链接，IOCTL 0x831020F8 控制充电模式。
         // 保养模式：{0x08, 0x03}，正常：{0x05, 0x08}，快充：{0x05, 0x07}
         // 查询：input=0xFF，返回值 bit5(0x20)=保养，bit2(0x04)=快充
-
-        private static bool SetLenovoByPercent(int percent)
-        {
-            // percent 映射到 3 档：<80 -> 保养(60%)，>=80 -> 正常(满充)
-            uint[] cmds = percent >= 80 ? LENOVO_MODE_NORMAL : LENOVO_MODE_CONSERVATION;
-            IntPtr h = OpenDevice(LENOVO_DEVICE);
-            if (h == NativeMethods.INVALID_HANDLE_VALUE) return false;
-            try
-            {
-                // 双命令连发，每条后 sleep 50ms
-                foreach (uint cmd in cmds)
-                {
-                    CallLenovoIoctl(h, cmd);
-                    System.Threading.Thread.Sleep(50);
-                }
-                // 回读校验：10 次 × 50ms
-                int expectedMode = (cmds == LENOVO_MODE_CONSERVATION) ? 0 :
-                                   (cmds == LENOVO_MODE_RAPID) ? 1 : 2;
-                for (int i = 0; i < 10; i++)
-                {
-                    int actual = QueryLenovoMode(h);
-                    if (actual == expectedMode) return true;
-                    System.Threading.Thread.Sleep(50);
-                }
-                Settings.Log("Lenovo SetLenovoByPercent: 回读不匹配，期望=" + expectedMode);
-                return false;
-            }
-            finally
-            {
-                NativeMethods.CloseHandle(h);
-            }
-        }
 
         /// <summary>返回 0=保养 / 1=快充 / 2=正常，-1=读取失败</summary>
         private static int QueryLenovoMode()

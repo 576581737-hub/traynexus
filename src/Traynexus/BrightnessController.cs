@@ -30,11 +30,35 @@ namespace Traynexus
         // DDC/CI 物理监视器句柄缓存（EnumerateMonitors 时获取，程序退出前不释放）
         private static readonly List<IntPtr> _physicalHandles = new List<IntPtr>();
 
+        // 内置屏亮度缓存：GetBrightness 是无缓存的 WMI 查询（100-500ms），
+        // 被 TrayContext.TickRefresh（1s）和 MainForm（2s）高频调用，全部在 UI 线程造成周期性卡顿。
+        // 加 5 秒缓存，把 WMI 查询频率从 ~3 次/2s 降到 ~1 次/5s。
+        private static readonly object _brightLock = new object();
+        private static int _cachedBrightness = int.MinValue;  // int.MinValue 表示尚未采集
+        private static DateTime _brightnessCacheTime = DateTime.MinValue;
+        private static readonly TimeSpan BrightnessCacheTtl = TimeSpan.FromSeconds(5);
+
+        /// <summary>清除内置屏亮度缓存，让下次 GetBrightness 立即重查 WMI。SetBrightness 成功后调用。</summary>
+        public static void InvalidateBrightnessCache()
+        {
+            lock (_brightLock)
+            {
+                _cachedBrightness = int.MinValue;
+                _brightnessCacheTime = DateTime.MinValue;
+            }
+        }
+
         /// <summary>
-        /// 获取内置屏当前亮度。返回 -1 表示不支持或读取失败。
+        /// 获取内置屏当前亮度。返回 -1 表示不支持或读取失败。结果缓存 5 秒。
         /// </summary>
         public static int GetBrightness()
         {
+            lock (_brightLock)
+            {
+                if (_cachedBrightness != int.MinValue && DateTime.Now - _brightnessCacheTime < BrightnessCacheTtl)
+                    return _cachedBrightness;
+            }
+            int value = -1;
             try
             {
                 using (var searcher = new ManagementObjectSearcher(
@@ -42,7 +66,8 @@ namespace Traynexus
                 {
                     foreach (var mo in searcher.Get())
                     {
-                        return Convert.ToInt32(mo["CurrentBrightness"]);
+                        value = Convert.ToInt32(mo["CurrentBrightness"]);
+                        break;
                     }
                 }
             }
@@ -50,7 +75,12 @@ namespace Traynexus
             {
                 Settings.Log("BrightnessController.GetBrightness 失败: " + ex.Message);
             }
-            return -1;
+            lock (_brightLock)
+            {
+                _cachedBrightness = value;
+                _brightnessCacheTime = DateTime.Now;
+            }
+            return value;
         }
 
         /// <summary>
@@ -68,6 +98,7 @@ namespace Traynexus
                     foreach (ManagementObject mo in searcher.Get())
                     {
                         mo.InvokeMethod("WmiSetBrightness", new object[] { 0, (byte)percent });
+                        InvalidateBrightnessCache();   // 设置成功后清缓存，让下次读取立即拿到新值
                         return true;
                     }
                 }
@@ -124,7 +155,7 @@ namespace Traynexus
                     foreach (ManagementObject mo in searcher.Get()) return true;
                 }
             }
-            catch { }
+            catch (Exception ex) { Settings.Log("BrightnessController.IsSupported 失败: " + ex.Message); }
             return false;
         }
 
@@ -141,7 +172,7 @@ namespace Traynexus
                     if (!m.IsInternal && m.DdcSupported) return true;
                 }
             }
-            catch { }
+            catch (Exception ex) { Settings.Log("BrightnessController.IsDdcSupported 失败: " + ex.Message); }
             return false;
         }
 

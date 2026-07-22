@@ -299,7 +299,7 @@ namespace Traynexus
                         try { p.Dispose(); } catch { }
                     }
                 }
-                catch { }
+                catch (Exception ex) { Settings.Log("ReleasePanel.LoadProcessesAsync 枚举失败: " + ex.Message); }
 
                 try
                 {
@@ -314,7 +314,7 @@ namespace Traynexus
                         ApplyFilterAndBind();
                     }));
                 }
-                catch { }
+                catch (Exception ex) { Settings.Log("ReleasePanel.LoadProcessesAsync 回调失败: " + ex.Message); }
             });
         }
 
@@ -582,7 +582,7 @@ namespace Traynexus
                         UpdateTitle();
                     }));
                 }
-                catch { }
+                catch (Exception ex) { Settings.Log("ReleasePanel.Execute 回调失败: " + ex.Message); }
             });
         }
 

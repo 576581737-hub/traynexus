@@ -6,14 +6,14 @@
 
 [Setup]
 AppName=TrayNexus
-AppVersion=1.0721.0
-AppVerName=TrayNexus 1.0721.0
+AppVersion=1.0722.1
+AppVerName=TrayNexus 1.0722.1
 AppPublisher=Aiyow
 AppCopyright=Copyright © 2026 Aiyow
 DefaultDirName={autopf}\TrayNexus
 DefaultGroupName=TrayNexus
 OutputDir=..\bin
-OutputBaseFilename=Traynexus-Setup-1.0721.0
+OutputBaseFilename=Traynexus-Setup-1.0722.1
 ; 安装包图标（同时也是卸载程序 unins000.exe 的图标来源）
 SetupIconFile=..\resources\tray_default.ico
 ; 控制面板「程序和功能」里显示的卸载图标，与安装包一致
@@ -42,4 +42,5 @@ Name: "{group}\Uninstall TrayNexus"; Filename: "{uninstallexe}"; IconFilename: "
 Name: desktopicon; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\Traynexus.exe"; Description: "Launch TrayNexus"; Flags: nowait postinstall skipifsilent
+; 使用 shellexec 让 ShellExecuteEx 处理应用清单里的 requireAdministrator，避免 CreateProcess code 740
+Filename: "{app}\Traynexus.exe"; Description: "Launch TrayNexus"; Flags: nowait postinstall skipifsilent shellexec runascurrentuser

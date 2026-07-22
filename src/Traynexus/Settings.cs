@@ -73,6 +73,10 @@ namespace Traynexus
         public bool NightCareEnabled = false;    // 夜间自动保养 22:00-07:00 降至 60%
         public bool WeekendFullCharge = false;   // 周末满充准备
 
+        // 更新检查
+        public bool UpdateCheckEnabled = true;           // 启动时自动检查更新
+        public string LastUpdateCheck = "";              // 上次检查时间（ISO 8601 字符串，避免 DateTime 序列化问题）
+
         public string ConfigDir;
         public string WhitelistPath;
         public string SettingsPath;
@@ -290,6 +294,10 @@ namespace Traynexus
                             s.NightCareEnabled = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
                         else if (k.Equals("WeekendFullCharge", StringComparison.OrdinalIgnoreCase))
                             s.WeekendFullCharge = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
+                        else if (k.Equals("UpdateCheckEnabled", StringComparison.OrdinalIgnoreCase))
+                            s.UpdateCheckEnabled = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
+                        else if (k.Equals("LastUpdateCheck", StringComparison.OrdinalIgnoreCase))
+                            s.LastUpdateCheck = v;
                     }
                 }
                 catch (Exception ex) { Log("Settings.Load 解析失败: " + ex.Message); }
@@ -308,7 +316,7 @@ namespace Traynexus
                         "# WeChat.exe\r\n",
                         new UTF8Encoding(false));
                 }
-                catch { }
+                catch (Exception ex) { Log("Settings.Load 创建默认白名单失败: " + ex.Message); }
             }
             else
             {
@@ -321,7 +329,7 @@ namespace Traynexus
                         s.UserWhitelist.Add(l);
                     }
                 }
-                catch { }
+                catch (Exception ex) { Log("Settings.Load 读取白名单失败: " + ex.Message); }
             }
             return s;
         }
@@ -343,6 +351,8 @@ namespace Traynexus
             sb.AppendLine("AutoBrightness=" + (AutoBrightness ? "1" : "0"));
             sb.AppendLine("NightCareEnabled=" + (NightCareEnabled ? "1" : "0"));
             sb.AppendLine("WeekendFullCharge=" + (WeekendFullCharge ? "1" : "0"));
+            sb.AppendLine("UpdateCheckEnabled=" + (UpdateCheckEnabled ? "1" : "0"));
+            sb.AppendLine("LastUpdateCheck=" + (LastUpdateCheck ?? ""));
 
             string tmp = SettingsPath + ".tmp";
             try
