@@ -17,7 +17,7 @@
 
 ---
 
-![TrayNexus Preview](docs/preview.svg)
+![TrayNexus Preview](docs/ScreenShot_2026-07-22_190422_222.png)
 
 ## 这是什么
 
