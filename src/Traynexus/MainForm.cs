@@ -240,7 +240,7 @@ namespace Traynexus
             footer.Padding = new Padding(0);
 
             var lblVer = new Label();
-            lblVer.Text = "Version: v1.0722.1";
+            lblVer.Text = "Version: v1.0722.2";
             lblVer.Dock = DockStyle.Top;
             lblVer.Height = 22;
             lblVer.AutoSize = false;
@@ -1311,9 +1311,13 @@ namespace Traynexus
             {
                 _settings.AutoBrightness = _autoBrightSw.Checked;
                 _settings.Save();
-                // 切换为开时立即触发一次自动调节
-                if (_autoBrightSw.Checked && _context != null)
-                    _context.TriggerAutoBrightness();
+                if (_context != null)
+                {
+                    if (_autoBrightSw.Checked)
+                        _context.TriggerAutoBrightness();         // 开：接管并立即调节
+                    else if (_settings.AutoBrightnessRestoreOnExit)
+                        AdaptiveBrightnessController.Release();   // 关：恢复系统亮度设置
+                }
             };
             autoRow.Controls.Add(_autoBrightSw);
             autoRow.Resize += (s, e) =>
@@ -2392,7 +2396,7 @@ namespace Traynexus
             brand.Controls.Add(lblSlog);
 
             var lblVer = new Label();
-            lblVer.Text = "v1.0722.1";
+            lblVer.Text = "v1.0722.2";
             lblVer.Font = Fonts.S8;
             lblVer.ForeColor = CInk2;
             lblVer.AutoSize = false;

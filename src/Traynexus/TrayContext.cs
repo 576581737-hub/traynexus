@@ -40,9 +40,12 @@ namespace Traynexus
         private bool _nightCareActive;       // 夜间保养当前是否激活
         private bool _weekendChargeActive;   // 周末满充当前是否激活
 
-        // 自动亮度定时器（10s 采样环境光，无传感器时不启动）
+        // 自动亮度定时器（15s 采样环境光，无传感器时不启动）
         private System.Windows.Forms.Timer _autoBrightTimer;
-        private int _lastAutoBrightness = -1;  // 上次设置的亮度，避免频繁调 WMI
+        private float? _luxEma;                 // 环境光照度的指数滑动平均（平滑噪声）
+        private int? _lastAutoTarget;           // 上次自动设定的目标亮度，用于死区迟滞
+        private int? _lastSetBrightness;        // 上次我们写入的亮度，用于检测用户手动调节
+        private DateTime _autoBrightPauseUntil = DateTime.MinValue;  // 用户手动调亮度后的暂停截止时间
         private volatile bool _autoBrightSampling;
 
         // 迁移通知
@@ -119,11 +122,17 @@ namespace Traynexus
             // 启动后延时检查更新（后台线程，24h 节流）
             StartUpdateCheck();
 
-            // 自动亮度定时器（10s 采样环境光；无传感器时不启动，UI 会灰色不可用）
+            // 自动亮度定时器（15s 采样环境光；无传感器时不启动，UI 会灰色不可用）
             _autoBrightTimer = new System.Windows.Forms.Timer();
-            _autoBrightTimer.Interval = 10000;
+            _autoBrightTimer.Interval = 15000;
             _autoBrightTimer.Tick += (s, e) => AutoBrightnessTick();
             _autoBrightTimer.Start();
+            // 启动即接管亮度控制（若开启了自动亮度且有传感器），让系统/OEM 自适应亮度让位
+            if (_settings.AutoBrightness && LightSensorReader.IsAvailable())
+            {
+                try { AdaptiveBrightnessController.TakeOver(); }
+                catch (Exception ex) { Settings.Log("启动接管亮度失败: " + ex.Message); }
+            }
         }
 
         // ============================================================
@@ -133,7 +142,7 @@ namespace Traynexus
         {
             // 用户关闭了自动亮度则跳过
             if (!_settings.AutoBrightness) return;
-            // 防重入：上次采样还没完（PowerShell 子进程可能 1-2s）
+            // 防重入：上次采样还没完（Runspace 读取异常时可能挂起，已有超时保护）
             if (_autoBrightSampling) return;
             _autoBrightSampling = true;
 
@@ -144,15 +153,32 @@ namespace Traynexus
                     // 传感器不可用则不动作（UI 已灰色不可用）
                     if (!LightSensorReader.IsAvailable()) return;
 
+                    // 用户手动调了亮度 → 暂停自动一段时间，避免立刻覆盖用户设定
+                    if (DateTime.Now < _autoBrightPauseUntil) return;
+                    int cur = BrightnessController.GetBrightness();
+                    if (_lastSetBrightness.HasValue && cur >= 0 && Math.Abs(cur - _lastSetBrightness.Value) > 3)
+                    {
+                        _autoBrightPauseUntil = DateTime.Now.AddSeconds(45);
+                        _lastAutoTarget = null;   // 暂停结束后重新评估
+                        return;
+                    }
+
                     float? lux = LightSensorReader.GetLux();
                     if (!lux.HasValue) return;   // 读取失败，静默跳过
 
-                    int target = LightSensorReader.LuxToBrightness(lux.Value);
-                    // 变化超过 5% 才实际调节，避免频繁 WMI SetBrightness
-                    if (Math.Abs(target - _lastAutoBrightness) < 5) return;
+                    // EMA 平滑传感器噪声，避免单次跳变引发亮度抖动
+                    _luxEma = _luxEma.HasValue ? (_luxEma.Value * 0.7f + lux.Value * 0.3f) : lux.Value;
+                    int target = LightSensorReader.LuxToBrightness(_luxEma.Value);
+
+                    // 亮度死区：与上次目标差不足 3% 不调，消除档位/曲线边界的来回抖动
+                    if (_lastAutoTarget.HasValue && Math.Abs(target - _lastAutoTarget.Value) < 3) return;
 
                     bool ok = BrightnessController.SetBrightness(target);
-                    if (ok) _lastAutoBrightness = target;
+                    if (ok)
+                    {
+                        _lastAutoTarget = target;
+                        _lastSetBrightness = target;
+                    }
                 }
                 catch (Exception ex) { Settings.Log("AutoBrightnessTick 失败: " + ex.Message); }
                 finally { _autoBrightSampling = false; }
@@ -162,7 +188,36 @@ namespace Traynexus
         /// <summary>供 MainForm 开关切换时立即触发一次自动亮度调节。</summary>
         internal void TriggerAutoBrightness()
         {
+            // 切换为开时立即接管亮度控制（幂等）；关时由调用方负责 Release
+            if (_settings.AutoBrightness)
+            {
+                try
+                {
+                    string msg = AdaptiveBrightnessController.TakeOver();
+                    if (!string.IsNullOrEmpty(msg))
+                        NotifyAutoBrightness(msg);
+                }
+                catch (Exception ex) { Settings.Log("TriggerAutoBrightness 接管失败: " + ex.Message); }
+            }
+            // 重置平滑/暂停状态，立即重新评估
+            _luxEma = null;
+            _lastAutoTarget = null;
+            _autoBrightPauseUntil = DateTime.MinValue;
             AutoBrightnessTick();
+        }
+
+        /// <summary>托盘气泡提示（自动亮度接管信息）。</summary>
+        private void NotifyAutoBrightness(string text)
+        {
+            try
+            {
+                if (_tray == null) return;
+                _tray.BalloonTipTitle = "Traynexus 自动亮度";
+                _tray.BalloonTipText = text;
+                _tray.BalloonTipIcon = ToolTipIcon.Info;
+                _tray.ShowBalloonTip(5000);
+            }
+            catch (Exception ex) { Settings.Log("NotifyAutoBrightness 失败: " + ex.Message); }
         }
 
         // ============================================================
@@ -512,6 +567,12 @@ namespace Traynexus
                 {
                     if (_quickForm != null && !_quickForm.IsDisposed) { try { _quickForm.Close(); } catch { } }
                     if (_mainForm != null && !_mainForm.IsDisposed) { try { _mainForm.Close(); } catch { } }
+                    // 退出时释放亮度接管，恢复系统/OEM 自适应亮度设置
+                    if (_settings.AutoBrightness && _settings.AutoBrightnessRestoreOnExit)
+                    {
+                        try { AdaptiveBrightnessController.Release(); }
+                        catch (Exception ex) { Settings.Log("Dispose 释放亮度接管失败: " + ex.Message); }
+                    }
                     _timer.Stop(); _timer.Dispose();
                     _batteryTimer.Stop(); _batteryTimer.Dispose();
                     if (_scheduleTimer != null) { _scheduleTimer.Stop(); _scheduleTimer.Dispose(); }
