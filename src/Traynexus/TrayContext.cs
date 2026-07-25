@@ -170,7 +170,7 @@ namespace Traynexus
             var menu = new ContextMenuStrip();
 
             var consoleItem = new ToolStripMenuItem("控制台", null, (s, e) => ShowConsole());
-            consoleItem.Font = new Font(consoleItem.Font, FontStyle.Bold);
+            consoleItem.Font = Fonts.S9B;
             menu.Items.Add(consoleItem);
 
             menu.Items.Add(new ToolStripSeparator());
@@ -472,6 +472,7 @@ namespace Traynexus
                     _tray.Dispose();
                     UiMarshal.Cleanup();
                     IconRenderer.DisposeCache();
+                    try { BrightnessController.Cleanup(); } catch { }
                 }
                 catch { }
             }

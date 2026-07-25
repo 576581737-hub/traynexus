@@ -30,7 +30,7 @@ namespace Traynexus
                 };
                 using (var p = Process.Start(psi))
                 {
-                    p.WaitForExit(3000);
+                    if (!p.WaitForExit(3000)) { try { p.Kill(); } catch { } return false; }
                     return p.ExitCode == 0;
                 }
             }
@@ -57,7 +57,7 @@ namespace Traynexus
                 };
                 using (var p = Process.Start(psi))
                 {
-                    p.WaitForExit(5000);
+                    if (!p.WaitForExit(5000)) { try { p.Kill(); } catch { } return false; }
                     return p.ExitCode == 0;
                 }
             }
@@ -82,7 +82,7 @@ namespace Traynexus
                 };
                 using (var p = Process.Start(psi))
                 {
-                    p.WaitForExit(5000);
+                    if (!p.WaitForExit(5000)) { try { p.Kill(); } catch { } return false; }
                     return p.ExitCode == 0;
                 }
             }
@@ -107,7 +107,7 @@ namespace Traynexus
                 };
                 using (var p = Process.Start(psi))
                 {
-                    p.WaitForExit(3000);
+                    if (!p.WaitForExit(3000)) { try { p.Kill(); } catch { } return; }
                     if (p.ExitCode != 0) return; // 旧任务不存在，无需清理
                 }
 
@@ -117,7 +117,7 @@ namespace Traynexus
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
-                using (var p = Process.Start(del)) { p.WaitForExit(5000); }
+                using (var p = Process.Start(del)) { if (!p.WaitForExit(5000)) { try { p.Kill(); } catch { } } }
             }
             catch (Exception ex) { Settings.Log("AutoStartManager.CleanupOldTask 失败（不影响启动）: " + ex.Message); }
         }

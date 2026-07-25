@@ -174,7 +174,7 @@ namespace Traynexus
 
             _loading = new Label();
             _loading.Text = "读取进程中...";
-            _loading.Font = new Font(this.Font.FontFamily, 11f);
+            _loading.Font = Fonts.S11;
             _loading.ForeColor = Color.DimGray;
             _loading.BackColor = SystemColors.Window;
             _loading.TextAlign = ContentAlignment.MiddleCenter;

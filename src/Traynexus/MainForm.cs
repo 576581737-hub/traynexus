@@ -239,7 +239,7 @@ namespace Traynexus
             footer.Padding = new Padding(0);
 
             var lblVer = new Label();
-            lblVer.Text = "Version: v1.0725.1";
+            lblVer.Text = "Version: v" + UpdateChecker.CurrentVersion;
             lblVer.Dock = DockStyle.Top;
             lblVer.Height = 22;
             lblVer.AutoSize = false;
@@ -2310,7 +2310,7 @@ namespace Traynexus
             brand.Controls.Add(lblSlog);
 
             var lblVer = new Label();
-            lblVer.Text = "v1.0725.1";
+            lblVer.Text = "v" + UpdateChecker.CurrentVersion;
             lblVer.Font = Fonts.S8;
             lblVer.ForeColor = CInk2;
             lblVer.AutoSize = false;

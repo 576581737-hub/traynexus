@@ -66,7 +66,8 @@ namespace Traynexus
                 {
                     foreach (var mo in searcher.Get())
                     {
-                        value = Convert.ToInt32(mo["CurrentBrightness"]);
+                        try { value = Convert.ToInt32(mo["CurrentBrightness"]); }
+                        finally { try { mo.Dispose(); } catch { } }
                         break;
                     }
                 }
@@ -97,9 +98,19 @@ namespace Traynexus
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
-                        mo.InvokeMethod("WmiSetBrightness", new object[] { 0, (byte)percent });
-                        InvalidateBrightnessCache();   // 设置成功后清缓存，让下次读取立即拿到新值
-                        return true;
+                        using (mo)
+                        {
+                            var ret = mo.InvokeMethod("WmiSetBrightness", new object[] { 0, (byte)percent })
+                                        as ManagementBaseObject;
+                            uint code = ret == null ? 0xffffffff : Convert.ToUInt32(ret["ReturnValue"]);
+                            if (code == 0)
+                            {
+                                InvalidateBrightnessCache();
+                                return true;
+                            }
+                            Settings.Log("WmiSetBrightness ReturnValue=" + code);
+                            return false;
+                        }
                     }
                 }
             }
@@ -181,6 +192,9 @@ namespace Traynexus
         /// </summary>
         public static List<MonitorInfo> EnumerateMonitors()
         {
+            // 先释放上次枚举的旧 DDC 句柄，避免每次枚举累积泄漏
+            Cleanup();
+
             var list = new List<MonitorInfo>();
             int internalCount = 0;
 
@@ -243,8 +257,15 @@ namespace Traynexus
                     {
                         if (pm.hPhysicalMonitor == IntPtr.Zero) continue;
 
-                        // 跳过内置屏（WMI 已枚举的），避免重复
-                        if (skipCount > 0) { skipCount--; continue; }
+                        // 跳过内置屏（WMI 已枚举的），避免重复——立即释放该句柄避免泄漏
+                        if (skipCount > 0)
+                        {
+                            skipCount--;
+                            var tmp = new NativeMethods.PHYSICAL_MONITOR[1];
+                            tmp[0] = pm;
+                            try { NativeMethods.DestroyPhysicalMonitors(1, tmp); } catch { }
+                            continue;
+                        }
 
                         // 检测 DDC/CI 能力
                         uint caps, colorTemps;
@@ -270,10 +291,10 @@ namespace Traynexus
                             {
                                 info.DdcMin = min;
                                 info.DdcMax = max;
-                                // 映射到 0-100
+                                // 映射到 0-100（先减 min 再乘除，避免分别截断误差）
                                 uint range = max - min;
                                 if (range > 0)
-                                    info.Brightness = (int)(cur * 100 / range) - (int)(min * 100 / range);
+                                    info.Brightness = (int)((cur - min) * 100 / range);
                                 else
                                     info.Brightness = (int)cur;
                             }
@@ -286,6 +307,10 @@ namespace Traynexus
                         else
                         {
                             info.Brightness = -1;
+                            // 非 DDC 外接屏：立即释放句柄避免泄漏
+                            var tmp = new NativeMethods.PHYSICAL_MONITOR[1];
+                            tmp[0] = pm;
+                            try { NativeMethods.DestroyPhysicalMonitors(1, tmp); } catch { }
                         }
 
                         list.Add(info);

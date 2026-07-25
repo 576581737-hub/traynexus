@@ -169,8 +169,7 @@ namespace Traynexus
             if (cap.Oem == OemVendor.Lenovo)
             {
                 uint[] cmds = percent >= 80 ? LENOVO_MODE_NORMAL : LENOVO_MODE_CONSERVATION;
-                int expectedMode = (cmds == LENOVO_MODE_CONSERVATION) ? 0 :
-                                   (cmds == LENOVO_MODE_RAPID) ? 1 : 2;
+                int expectedMode = (cmds == LENOVO_MODE_CONSERVATION) ? 0 : 2;
 
                 // 阶段1：锁内发双命令（含 2×50ms Sleep，约 100ms）
                 bool sent;
@@ -279,13 +278,11 @@ namespace Traynexus
                 }
             }
 
-            if (result != null)
+            // 缓存结果（含 null/失败），避免每秒重试 IOCTL
+            lock (_cacheLock)
             {
-                lock (_cacheLock)
-                {
-                    _cachedStatus = result;
-                    _statusTime = DateTime.Now;
-                }
+                _cachedStatus = result;
+                _statusTime = DateTime.Now;
             }
             return result;
         }

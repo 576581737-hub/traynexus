@@ -38,6 +38,7 @@ namespace Traynexus
                     if (fi.Exists && fi.Length > MaxLogBytes)
                     {
                         string full = File.ReadAllText(LogPath, Encoding.UTF8);
+                        // 截断：按字符数近似 512KB（中文日志 UTF-8 编码后字节数略大于字符数，近似可接受）
                         int keepChars = (int)Math.Min(full.Length, KeepLogBytes);
                         string tail = full.Substring(full.Length - keepChars);
                         // 从下一行开头截，避免半行

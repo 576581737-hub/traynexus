@@ -20,7 +20,7 @@ namespace Traynexus
         private const string RepoUrl = "https://github.com/576581737-hub/traynexus/releases";
 
         /// <summary>当前应用版本号（与 MainForm lblVer / .iss AppVersion 保持一致）</summary>
-        public const string CurrentVersion = "1.0725.1";
+        public const string CurrentVersion = "1.0725.2";
 
         /// <summary>检查结果</summary>
         public class UpdateResult
@@ -46,10 +46,20 @@ namespace Traynexus
                     wc.Headers[HttpRequestHeader.UserAgent] = "Traynexus/" + CurrentVersion;
                     wc.Headers[HttpRequestHeader.Accept] = "application/vnd.github+json";
 
+                    // 8 秒超时（WebClient 无 Timeout 属性，用 HttpWebRequest 替代）
                     string json;
                     try
                     {
-                        json = wc.DownloadString(RepoApiUrl);
+                        var req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(RepoApiUrl);
+                        req.Timeout = 8000;
+                        req.ReadWriteTimeout = 8000;
+                        req.UserAgent = "Traynexus/" + CurrentVersion;
+                        req.Accept = "application/vnd.github+json";
+                        using (var resp = req.GetResponse())
+                        using (var sr = new System.IO.StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                        {
+                            json = sr.ReadToEnd();
+                        }
                     }
                     catch (WebException wex)
                     {
