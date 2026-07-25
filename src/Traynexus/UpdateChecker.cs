@@ -20,13 +20,13 @@ namespace Traynexus
         private const string RepoUrl = "https://github.com/576581737-hub/traynexus/releases";
 
         /// <summary>当前应用版本号（与 MainForm lblVer / .iss AppVersion 保持一致）</summary>
-        public const string CurrentVersion = "1.0722.1";
+        public const string CurrentVersion = "1.0725.1";
 
         /// <summary>检查结果</summary>
         public class UpdateResult
         {
             public bool HasUpdate;
-            public string LatestVersion;   // 不含 v 前缀，如 "1.0722.2"
+            public string LatestVersion;   // 不含 v 前缀，如 "1.0725.1"
             public string ReleaseUrl;      // Release 页面 URL
         }
 
@@ -100,7 +100,7 @@ namespace Traynexus
 
         /// <summary>
         /// 判断 latest 是否比 current 新。逐段数字比对。
-        /// 如 "1.0722.2" vs "1.0722.1" -> true；"1.0722.1" vs "1.0722.1" -> false。
+        /// 如 "1.0725.1" vs "1.0722.1" -> true；"1.0722.1" vs "1.0722.1" -> false。
         /// 非数字段视为 0。
         /// </summary>
         private static bool IsNewerVersion(string latest, string current)

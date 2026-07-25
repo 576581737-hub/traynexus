@@ -16,7 +16,7 @@ namespace Traynexus
     /// 2. GetLux()：走 WinRT LightSensor 读取 lux 值。部分传感器硬件存在但驱动未正确暴露给 WinRT，
     ///    此时返回 null，调用方据此提示"传感器数据不可用"而非"未检测到传感器"。
     ///
-    /// v1.0722.2 优化：GetLux 复用**常驻 PowerShell Runspace**（仅首次加载 WinRT 类型），
+    /// v1.0725.1 优化：GetLux 复用**常驻 PowerShell Runspace**（仅首次加载 WinRT 类型），
     /// 不再每次读取都新开 powershell.exe 进程（原实现每 10~15s 一次，浪费且慢）。
     /// </summary>
     public static class LightSensorReader

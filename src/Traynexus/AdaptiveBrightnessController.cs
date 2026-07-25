@@ -19,9 +19,11 @@ namespace Traynexus
     /// </summary>
     public static class AdaptiveBrightnessController
     {
-        // Windows 电源设置：视频子组下的"自适应亮度"
+        // Windows 电源设置：视频子组下的"自适应亮度"（ADAPTBRIGHT）
+        // 注意：aded5e82-b909-4619-9949-f5d71dac0bcb 在本机是"显示器亮度等级"(VIDEONORMALLEVEL, 0-100%)，
+        // 绝不能去禁用它（否则会把亮度设成 0 = 黑屏）。真正可开关的自适应亮度是下面这个 GUID。
         private const string SUB_VIDEO = "7516b95f-f776-4464-8c53-06167f40cc99";
-        private const string VIDEOADAPT = "aded5e82-b909-4619-9949-f5d71dac0bcb";
+        private const string VIDEOADAPT = "fbd9aa66-9553-4097-ba44-ed6e9d65eab8";
         // 显示设备类（用于探测 AMD Vari-Bright 注册表）
         private const string DISPLAY_CLASS = "{4d36e968-e325-11ce-bfc1-08002be10318}";
 
