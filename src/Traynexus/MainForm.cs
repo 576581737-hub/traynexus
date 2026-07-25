@@ -1264,7 +1264,7 @@ namespace Traynexus
 
             // 副标题
             var lblD = new Label();
-            lblD.Text = "统一管理多显示器亮度，手动调节。";
+            lblD.Text = "统一管理多显示器亮度。";
             lblD.Font = Fonts.S9;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
