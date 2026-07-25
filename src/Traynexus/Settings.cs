@@ -66,11 +66,6 @@ namespace Traynexus
         // 自定义充电上限百分比（50-100），由 ChargeMode 推导或用户滑块设定
         public int ChargeLimit = 80;
 
-        // 亮度管理
-        public bool AutoBrightness = false;
-        // 自动亮度：关闭/退出时恢复系统原生亮度设置（Windows 自适应亮度 + AMD Vari-Bright）
-        public bool AutoBrightnessRestoreOnExit = true;
-
         // 计划任务
         public bool NightCareEnabled = false;    // 夜间自动保养 22:00-07:00 降至 60%
         public bool WeekendFullCharge = false;   // 周末满充准备
@@ -290,10 +285,6 @@ namespace Traynexus
                                 if (iv >= 50 && iv <= 100) s.ChargeLimit = iv;
                             }
                         }
-                        else if (k.Equals("AutoBrightness", StringComparison.OrdinalIgnoreCase))
-                            s.AutoBrightness = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
-                        else if (k.Equals("AutoBrightnessRestoreOnExit", StringComparison.OrdinalIgnoreCase))
-                            s.AutoBrightnessRestoreOnExit = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
                         else if (k.Equals("NightCareEnabled", StringComparison.OrdinalIgnoreCase))
                             s.NightCareEnabled = v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase);
                         else if (k.Equals("WeekendFullCharge", StringComparison.OrdinalIgnoreCase))
@@ -352,8 +343,6 @@ namespace Traynexus
             sb.AppendLine("ThresholdPercent=" + ThresholdPercent);
             sb.AppendLine("ChargeMode=" + ChargeMode);
             sb.AppendLine("ChargeLimit=" + ChargeLimit);
-            sb.AppendLine("AutoBrightness=" + (AutoBrightness ? "1" : "0"));
-            sb.AppendLine("AutoBrightnessRestoreOnExit=" + (AutoBrightnessRestoreOnExit ? "1" : "0"));
             sb.AppendLine("NightCareEnabled=" + (NightCareEnabled ? "1" : "0"));
             sb.AppendLine("WeekendFullCharge=" + (WeekendFullCharge ? "1" : "0"));
             sb.AppendLine("UpdateCheckEnabled=" + (UpdateCheckEnabled ? "1" : "0"));

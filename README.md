@@ -25,7 +25,7 @@ TrayNexus 把一个 Windows 用户最常需要的几件「系统维护小事」�
 
 - **内存释放** —— 清理 Standby 备用列表、回收工作集，支持阈值自动触发，让老机器/小内存笔记本更跟手。
 - **电池保养** —— 对接联想、华硕等厂商的充电阈值接口，把电池长期保持在 60% 保养档，显著延缓老化。
-- **亮度管理** —— 直接读写内置屏幕亮度，支持环境光自动调节。开启自动亮度时**自动接管**系统亮度控制（关闭 Windows 自适应亮度与 AMD Vari-Bright），并用连续曲线平滑过渡、尊重你的手动调节。
+- **亮度管理** —— 直接读写内置屏幕亮度，手动调节优先（带开关提示）。
 - **功能诊断** —— 一键检测各项功能依赖是否就绪，缺驱动就给出安装引导。
 
 它**不依赖任何外部运行时**：不需要 .NET 6/7/8 SDK，不需要 WebView2，不需要 Visual Studio。系统自带的 .NET Framework 4.x 就够了，编译产物是**一个约 300 KB 的 exe**。
@@ -40,7 +40,7 @@ TrayNexus 把一个 Windows 用户最常需要的几件「系统维护小事」�
 | 内存清理引擎 | StandbyList + WorkingSet 组合释放，可设阈值自动触发（60 秒冷却），含进程白名单保护 |
 | 电池信息采集 | 设计容量 / 满充容量 / 循环次数 / 健康度，WMI 不可用时用 `powercfg` 报告兜底 |
 | OEM 充电控制 | 联想 `/Management` 三档模式；华硕任意阈值写入；Dell/HP 规划中 |
-| 亮度控制 | WMI 读写内置屏亮度；自动亮度开启时接管系统控制（关 Windows 自适应亮度 + AMD Vari-Bright），连续曲线平滑 + 手动调节优先 |
+| 亮度控制 | WMI 读写内置屏亮度；手动调节优先 |
 | 功能诊断面板 | 4 张可折叠卡片，检测依赖状态并给出安装引导 |
 | 计划任务 | 夜间自动切保养档、周末自动满充，由内置定时器驱动 |
 | 开机自启 | 通过系统任务计划程序注册，无残留注册表项 |
@@ -106,8 +106,6 @@ Traynexus/
 │   ├── BatteryInfo.cs      # 电池采集（WMI + powercfg 兜底）
 │   ├── BrightnessController.cs  # 亮度控制
 │   ├── OemChargeController.cs   # OEM 充电阈值（联想 / 华硕 IOCTL）
-│   ├── LightSensorReader.cs     # 环境光传感器读取（常驻 Runspace）
-│   ├── AdaptiveBrightnessController.cs  # 自动亮度单一控制源（接管系统/OEM自适应亮度）
 │   ├── UpdateChecker.cs         # 更新检查（GitHub Releases）
 │   ├── Settings.cs / Fonts.cs / AutoStartManager.cs / NativeMethods.cs / app.manifest
 ├── resources/tray_default.ico   # 多尺寸品牌图标（安装包/卸载/快捷方式统一使用）

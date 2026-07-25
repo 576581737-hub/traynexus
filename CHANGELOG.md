@@ -4,6 +4,22 @@
 
 ---
 
+## v1.0725.2 - 2026-07-26（**移除自动亮度功能**）
+
+经过 v1.0725.1 一系列接管 + 平滑 + 手动优先重构，并尝试 WinRT LightSensor + HID 直读 ITE 8350 EC 多种 ALS 读法后确认：**联想 + ITE 8350 机器上的环境光传感器数据不通过任何标准公开接口暴露**（WinRT `LightSensor.GetDefault()` 返回 null、HID COL02 device open 成功但 `HidD_GetAttributes` 返回 `ERROR_NOT_FOUND`、ACPI/EC 需要内核级工具）。
+
+- **删除自动亮度功能**（开/关切换、单一控制源接管、连续曲线、EMA、手动优先 45s、诊断页 ALS 检测全部移除）
+- 移除文件：`AdaptiveBrightnessController.cs`、`LightSensorReader.cs`
+- 移除 `build.rsp`/`build.bat`/`build_debug.bat` 中 System.Management.Automation GAC 引用
+- 移除 `Settings.AutoBrightness` / `AutoBrightnessRestoreOnExit` 字段及序列化
+- 移除主面板「自动亮度」开关 UI + 诊断页「环境光传感器」行
+- 移除启动期 TakeOver 与退出期 Release 调用
+- 移除「亮度管理」feature 描述（README/CHANGELOG）
+
+**保留**：手动亮度滑块（仍是核心功能）；亮度管理逻辑回归「纯手动调节」，不再与 Windows 自适应亮度 / AMD Vari-Bright / EC 自动调光竞争。
+
+---
+
 ## v1.0725.1 - 2026-07-25（自动亮度接管 + 平滑 + 效率）
 
 ### 自动亮度重构（单一控制源）

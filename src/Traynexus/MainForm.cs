@@ -69,7 +69,6 @@ namespace Traynexus
         private Label _healthLabel, _healthStat, _healthStat2;
 
         // 亮度页
-        private ToggleSwitch _autoBrightSw;
 
         // 关于页：检查更新按钮（文字动态更新）
         private SoftLinkButton _updateBtn;
@@ -562,7 +561,7 @@ namespace Traynexus
                 if (bright >= 0)
                 {
                     _ovBriBig.Text = bright + "%";
-                    _ovBriSub.Text = _settings.AutoBrightness ? "自动亮度：开" : "自动亮度：关";
+                    _ovBriSub.Text = "手动调节";
                     _ovBriBar.Value = Math.Min(100, bright);
                 }
                 else
@@ -1274,57 +1273,17 @@ namespace Traynexus
             lblD.Margin = new Padding(0, 0, 0, 12);
             flow.Controls.Add(lblD);
 
-            // "自动亮度" 小节标题
-            var lblAuto = new Label();
-            lblAuto.Text = "自动亮度";
-            lblAuto.Font = Fonts.S10B;
-            lblAuto.ForeColor = CInk;
-            lblAuto.AutoSize = false;
-            lblAuto.Height = 24;
-            lblAuto.TextAlign = ContentAlignment.MiddleLeft;
-            lblAuto.Margin = new Padding(0, 0, 0, 4);
-            flow.Controls.Add(lblAuto);
+            // 手动亮度小节标题
+            var lblBri = new Label();
+            lblBri.Text = "亮度调节";
+            lblBri.Font = Fonts.S10B;
+            lblBri.ForeColor = CInk;
+            lblBri.AutoSize = false;
+            lblBri.Height = 24;
+            lblBri.TextAlign = ContentAlignment.MiddleLeft;
+            lblBri.Margin = new Padding(0, 0, 0, 4);
+            flow.Controls.Add(lblBri);
 
-            // 自动亮度开关行
-            var autoRow = new Panel();
-            autoRow.Height = 32;
-            autoRow.Margin = new Padding(0, 0, 0, 12);
-            autoRow.BackColor = CPanel;
-            var lblAutoDesc = new Label();
-            // 探测环境光传感器：有则显示"根据环境光自动调节"，无则灰色不可用并提示
-            bool hasLightSensor = LightSensorReader.IsAvailable();
-            lblAutoDesc.Text = hasLightSensor ? "根据环境光自动调节" : "未检测到环境光传感器";
-            lblAutoDesc.Font = Fonts.S9;
-            lblAutoDesc.ForeColor = hasLightSensor ? CInk : CInk3;
-            lblAutoDesc.AutoSize = false;
-            lblAutoDesc.Size = new Size(280, 32);
-            lblAutoDesc.Location = new Point(0, 0);
-            lblAutoDesc.TextAlign = ContentAlignment.MiddleLeft;
-            autoRow.Controls.Add(lblAutoDesc);
-
-            _autoBrightSw = new ToggleSwitch();
-            _autoBrightSw.Checked = hasLightSensor && _settings.AutoBrightness;
-            _autoBrightSw.Enabled = hasLightSensor;   // 无传感器时灰色不可用
-            _autoBrightSw.Size = new Size(46, 26);
-            _autoBrightSw.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _autoBrightSw.CheckedChanged += (s, e) =>
-            {
-                _settings.AutoBrightness = _autoBrightSw.Checked;
-                _settings.Save();
-                if (_context != null)
-                {
-                    if (_autoBrightSw.Checked)
-                        _context.TriggerAutoBrightness();         // 开：接管并立即调节
-                    else if (_settings.AutoBrightnessRestoreOnExit)
-                        AdaptiveBrightnessController.Release();   // 关：恢复系统亮度设置
-                }
-            };
-            autoRow.Controls.Add(_autoBrightSw);
-            autoRow.Resize += (s, e) =>
-            {
-                _autoBrightSw.Location = new Point(autoRow.Width - 46, 3);
-            };
-            flow.Controls.Add(autoRow);
 
             // 查找显示器按钮 -> 重新枚举并刷新卡片
             var btnFind = new FlatBorderedButton();
@@ -1817,52 +1776,7 @@ namespace Traynexus
                     "3. 显示器连接线不支持 DDC（部分 HDMI 转接器）\r\n" +
                     "4. 显卡驱动未启用 DDC/CI 支持",
                     "外接屏 DDC/CI 说明", MessageBoxButtons.OK, MessageBoxIcon.Information)));
-            // 环境光传感器检测：PnP 检测硬件是否存在 + WinRT 能否读取 lux
-            LightSensorReader.InvalidateCache();   // 诊断页重新检测时清除缓存
-            bool hasLightSensorHw = LightSensorReader.IsAvailable();
-            string lightSensorStatusText;
-            DiagStatus lightSensorStatus;
-            if (!hasLightSensorHw)
-            {
-                lightSensorStatus = DiagStatus.Unsupported;
-                lightSensorStatusText = "未检测到";
-            }
-            else
-            {
-                // 硬件存在，再测 WinRT 能否读到 lux
-                float? lux = LightSensorReader.GetLux();
-                if (lux.HasValue)
-                {
-                    lightSensorStatus = DiagStatus.Ready;
-                    lightSensorStatusText = "就绪 · " + lux.Value.ToString("F0") + " lux";
-                }
-                else
-                {
-                    lightSensorStatus = DiagStatus.Warning;
-                    lightSensorStatusText = "硬件已检测，数据不可用";
-                }
-            }
-            y4 = AddDiagnosticRow(card4, y4, "环境光传感器", "自动亮度依赖的环境光传感器",
-                lightSensorStatus, lightSensorStatusText,
-                lightSensorStatus == DiagStatus.Ready ? null : (Action)(() => MessageBox.Show(this,
-                    "自动亮度功能依赖环境光传感器。\r\n\r\n" +
-                    (hasLightSensorHw
-                        ? "已检测到传感器硬件，但当前无法读取环境光数据。\r\n\r\n" +
-                          "可能原因：\r\n" +
-                          "1. 传感器驱动未正确暴露给 Windows WinRT 接口\r\n" +
-                          "2. 传感器为 HID 集合设备，非标准 ALS 类型\r\n" +
-                          "3. 驱动版本过旧\r\n\r\n" +
-                          "解决方法：\r\n" +
-                          "更新主板/芯片组驱动到最新版本，或联系厂商确认传感器 WinRT 兼容性。"
-                        : "当前系统未检测到任何传感器设备。\r\n\r\n" +
-                          "可能原因：\r\n" +
-                          "1. 台式机通常没有环境光传感器\r\n" +
-                          "2. 笔记本传感器被 BIOS 禁用\r\n" +
-                          "3. 传感器驱动未安装\r\n\r\n" +
-                          "无环境光传感器时，自动亮度开关将灰色不可用。"),
-                    "环境光传感器说明", MessageBoxButtons.OK, MessageBoxIcon.Information)),
-                isLast: true);
-            int brightReady = (brightWmi ? 1 : 0) + (ddcOk ? 1 : 0) + (lightSensorStatus == DiagStatus.Ready ? 1 : 0);
+            int brightReady = (brightWmi ? 1 : 0) + (ddcOk ? 1 : 0);
             card4.SetSummary(brightReady + "/3就绪", brightReady == 3 ? CGreen : (brightReady >= 1 ? CBlue : CInk3));
             flow.Controls.Add(card4);
 
