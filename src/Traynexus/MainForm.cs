@@ -1264,7 +1264,7 @@ namespace Traynexus
 
             // 副标题
             var lblD = new Label();
-            lblD.Text = "统一管理多显示器亮度，支持自动亮度。";
+            lblD.Text = "统一管理多显示器亮度，手动调节。";
             lblD.Font = Fonts.S9;
             lblD.ForeColor = CInk2;
             lblD.AutoSize = false;
@@ -1777,7 +1777,7 @@ namespace Traynexus
                     "4. 显卡驱动未启用 DDC/CI 支持",
                     "外接屏 DDC/CI 说明", MessageBoxButtons.OK, MessageBoxIcon.Information)));
             int brightReady = (brightWmi ? 1 : 0) + (ddcOk ? 1 : 0);
-            card4.SetSummary(brightReady + "/3就绪", brightReady == 3 ? CGreen : (brightReady >= 1 ? CBlue : CInk3));
+            card4.SetSummary(brightReady + "/2就绪", brightReady == 2 ? CGreen : (brightReady >= 1 ? CBlue : CInk3));
             flow.Controls.Add(card4);
 
             // 全部卡片添加完后，显式刷新滚动范围
