@@ -491,7 +491,8 @@ namespace Traynexus
             {
                 foreach (ManagementObject mo in searcher.Get())
                 {
-                    return Convert.ToString(mo["Manufacturer"]);
+                    try { return Convert.ToString(mo["Manufacturer"]); }
+                    finally { try { mo.Dispose(); } catch { } }
                 }
             }
             return "";
@@ -503,7 +504,8 @@ namespace Traynexus
             {
                 foreach (ManagementObject mo in searcher.Get())
                 {
-                    return Convert.ToString(mo["Model"]);
+                    try { return Convert.ToString(mo["Model"]); }
+                    finally { try { mo.Dispose(); } catch { } }
                 }
             }
             return "";

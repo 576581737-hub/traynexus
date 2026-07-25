@@ -81,25 +81,29 @@ namespace Traynexus
                 {
                     foreach (var mo in searcher.Get())
                     {
-                        snap.IsPresent = true;
                         try
                         {
-                            snap.Percent = Convert.ToInt32(mo["EstimatedChargeRemaining"]);
+                            snap.IsPresent = true;
+                            try
+                            {
+                                snap.Percent = Convert.ToInt32(mo["EstimatedChargeRemaining"]);
+                            }
+                            catch { snap.Percent = 0; }
+                            // BatteryStatus: 1=放电, 2=交流电, 3=已充电, 4=低, 5=严重低, 其他
+                            // 注意：status=2 只表示「接着电源」，不代表真正在充电
+                            // 保养模式下 status=2 但 ChargeRate=0（充电已暂停）
+                            // status=3 是"已充满"，不算充电中
+                            try
+                            {
+                                int status = Convert.ToInt32(mo["BatteryStatus"]);
+                                // 只把 2 (AC power) 当作潜在充电中；3 (Charged) 已满，不算
+                                // 后面 root\wmi ChargeRate 查询成功时会用真实充电速率覆盖
+                                snap.IsCharging = (status == 2 || status == 6 || status == 7 || status == 8 || status == 9);
+                            }
+                            catch { snap.IsCharging = false; }
+                            break; // 只取第一个电池
                         }
-                        catch { snap.Percent = 0; }
-                        // BatteryStatus: 1=放电, 2=交流电, 3=已充电, 4=低, 5=严重低, 其他
-                        // 注意：status=2 只表示「接着电源」，不代表真正在充电
-                        // 保养模式下 status=2 但 ChargeRate=0（充电已暂停）
-                        // status=3 是"已充满"，不算充电中
-                        try
-                        {
-                            int status = Convert.ToInt32(mo["BatteryStatus"]);
-                            // 只把 2 (AC power) 当作潜在充电中；3 (Charged) 已满，不算
-                            // 后面 root\wmi ChargeRate 查询成功时会用真实充电速率覆盖
-                            snap.IsCharging = (status == 2 || status == 6 || status == 7 || status == 8 || status == 9);
-                        }
-                        catch { snap.IsCharging = false; }
-                        break; // 只取第一个电池
+                        finally { try { mo.Dispose(); } catch { } }
                     }
                 }
 
@@ -112,10 +116,14 @@ namespace Traynexus
                     {
                         foreach (var mo in searcher.Get())
                         {
-                            snap.ChargeRate = Convert.ToInt32(mo["ChargeRate"]);
-                            // ChargeRate=0 时覆盖 IsCharging 为 false
-                            if (snap.ChargeRate == 0) snap.IsCharging = false;
-                            break;
+                            try
+                            {
+                                snap.ChargeRate = Convert.ToInt32(mo["ChargeRate"]);
+                                // ChargeRate=0 时覆盖 IsCharging 为 false
+                                if (snap.ChargeRate == 0) snap.IsCharging = false;
+                                break;
+                            }
+                            finally { try { mo.Dispose(); } catch { } }
                         }
                     }
                 }
@@ -157,9 +165,13 @@ namespace Traynexus
                 {
                     foreach (var mo in searcher.Get())
                     {
-                        try { deep.DesignCapacityWh = Convert.ToInt32(mo["DesignedCapacity"]); } catch { }
-                        try { deep.FullChargeCapacityWh = Convert.ToInt32(mo["FullChargedCapacity"]); } catch { }
-                        break;
+                        try
+                        {
+                            try { deep.DesignCapacityWh = Convert.ToInt32(mo["DesignedCapacity"]); } catch { }
+                            try { deep.FullChargeCapacityWh = Convert.ToInt32(mo["FullChargedCapacity"]); } catch { }
+                            break;
+                        }
+                        finally { try { mo.Dispose(); } catch { } }
                     }
                 }
             }
@@ -172,8 +184,12 @@ namespace Traynexus
                 {
                     foreach (var mo in searcher.Get())
                     {
-                        try { deep.CycleCount = Convert.ToInt32(mo["CycleCount"]); } catch { }
-                        break;
+                        try
+                        {
+                            try { deep.CycleCount = Convert.ToInt32(mo["CycleCount"]); } catch { }
+                            break;
+                        }
+                        finally { try { mo.Dispose(); } catch { } }
                     }
                 }
             }
@@ -208,11 +224,15 @@ namespace Traynexus
                 {
                     foreach (var mo in searcher.Get())
                     {
-                        try { if (string.IsNullOrEmpty(deep.BatteryName)) deep.BatteryName = Convert.ToString(mo["DeviceID"]); } catch { }
-                        try { if (string.IsNullOrEmpty(deep.Manufacturer)) deep.Manufacturer = Convert.ToString(mo["ManufactureName"]); } catch { }
-                        try { if (string.IsNullOrEmpty(deep.SerialNumber)) deep.SerialNumber = Convert.ToString(mo["SerialNumber"]); } catch { }
-                        try { if (string.IsNullOrEmpty(deep.Chemistry)) deep.Chemistry = Convert.ToString(mo["Chemistry"]); } catch { }
-                        break;
+                        try
+                        {
+                            try { if (string.IsNullOrEmpty(deep.BatteryName)) deep.BatteryName = Convert.ToString(mo["DeviceID"]); } catch { }
+                            try { if (string.IsNullOrEmpty(deep.Manufacturer)) deep.Manufacturer = Convert.ToString(mo["ManufactureName"]); } catch { }
+                            try { if (string.IsNullOrEmpty(deep.SerialNumber)) deep.SerialNumber = Convert.ToString(mo["SerialNumber"]); } catch { }
+                            try { if (string.IsNullOrEmpty(deep.Chemistry)) deep.Chemistry = Convert.ToString(mo["Chemistry"]); } catch { }
+                            break;
+                        }
+                        finally { try { mo.Dispose(); } catch { } }
                     }
                 }
             }

@@ -163,7 +163,11 @@ namespace Traynexus
                 using (var searcher = new ManagementObjectSearcher(
                     "root\\wmi", "SELECT * FROM WmiMonitorBrightnessMethods"))
                 {
-                    foreach (ManagementObject mo in searcher.Get()) return true;
+                    foreach (ManagementObject mo in searcher.Get())
+                    {
+                        try { return true; }
+                        finally { try { mo.Dispose(); } catch { } }
+                    }
                 }
             }
             catch (Exception ex) { Settings.Log("BrightnessController.IsSupported 失败: " + ex.Message); }
@@ -206,13 +210,17 @@ namespace Traynexus
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
-                        var info = new MonitorInfo();
-                        info.IsInternal = true;
-                        internalCount++;
-                        info.Name = "内置显示器";
-                        try { info.Brightness = Convert.ToInt32(mo["CurrentBrightness"]); }
-                        catch { info.Brightness = -1; }
-                        list.Add(info);
+                        try
+                        {
+                            var info = new MonitorInfo();
+                            info.IsInternal = true;
+                            internalCount++;
+                            info.Name = "内置显示器";
+                            try { info.Brightness = Convert.ToInt32(mo["CurrentBrightness"]); }
+                            catch { info.Brightness = -1; }
+                            list.Add(info);
+                        }
+                        finally { try { mo.Dispose(); } catch { } }
                     }
                 }
             }
